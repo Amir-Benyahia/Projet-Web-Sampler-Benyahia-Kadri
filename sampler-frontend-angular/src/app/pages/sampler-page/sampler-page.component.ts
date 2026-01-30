@@ -180,24 +180,18 @@ export class SamplerPageComponent implements OnInit {
       const fileName = `recording_${Date.now()}.webm`;
       formData.append('file', this.recordedBlob, fileName);
 
-      console.log('Debut de l\'upload du fichier:', fileName);
-
       // Upload du fichier vers le backend
       const response = await fetch('http://localhost:5000/api/presets/upload', {
         method: 'POST',
         body: formData
       });
 
-      console.log('Reponse du serveur:', response.status, response.statusText);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Erreur serveur:', errorText);
         throw new Error(`Erreur lors de l'upload du fichier: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('Resultat de l\'upload:', result);
       const uploadedPath = result.filePath;
 
       // Ajout du sample au preset
@@ -207,12 +201,9 @@ export class SamplerPageComponent implements OnInit {
         padIndex: null
       });
 
-      console.log('Mise a jour du preset avec le sample:', uploadedPath);
-
       // Sauvegarde du preset mis a jour
       this.presetService.updatePreset(this.selectedPreset._id!, this.selectedPreset).subscribe({
         next: (updatedPreset) => {
-          console.log('Preset mis a jour avec le nouvel enregistrement');
           this.selectedPreset = updatedPreset;
           this.closeRecordingModal();
           alert('Enregistrement ajoute au preset avec succes !');

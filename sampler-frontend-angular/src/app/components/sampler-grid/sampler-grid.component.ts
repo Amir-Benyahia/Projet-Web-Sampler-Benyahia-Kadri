@@ -93,16 +93,13 @@ export class SamplerGridComponent {
             url = `http://localhost:5000/presets/${url}`;
           }
           
-          console.log('Chargement du sample:', url);
           const buffer = await this.audioService.loadAudioBuffer(url);
           this.pads[padIndex].audioBuffer = buffer;
           
           // Enregistrer le buffer dans le service pour le sequencer
           this.audioService.setPadBuffer(padIndex, buffer);
-          
-          console.log('Sample chargé avec succès:', sample.name);
         } catch (error) {
-          console.error(`Erreur chargement sample ${sample.name}:`, error);
+          // Erreur silencieuse
         }
       }
     }
@@ -117,13 +114,7 @@ export class SamplerGridComponent {
     // Initialiser l'AudioContext au premier clic
     this.audioService.initAudioContext();
     
-    console.log(`===== PLAYPAD ${padIndex} =====`);
-    console.log('Pad:', pad);
-    console.log('AudioBuffer:', pad.audioBuffer);
-    console.log('Sample:', pad.sample);
-    
     if (!pad.audioBuffer) {
-      console.warn(`Pad ${padIndex} n'a pas de sample chargé`);
       return;
     }
 

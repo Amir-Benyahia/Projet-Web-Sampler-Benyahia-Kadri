@@ -55,7 +55,6 @@ export class SequencerService {
       createdAt: new Date()
     };
     this.recordStartTime = Date.now();
-    console.log('Enregistrement demarre');
   }
 
   // Enregistrer une note jouee
@@ -67,8 +66,6 @@ export class SequencerService {
       padIndex,
       time: currentTime
     });
-    
-    console.log(`Note enregistree: pad ${padIndex} a ${currentTime}ms`);
   }
 
   // Arreter l'enregistrement
@@ -78,14 +75,11 @@ export class SequencerService {
     this.recording = false;
     this.isRecording = false;
     this.pattern.duration = Date.now() - this.recordStartTime;
-    
-    console.log(`Enregistrement arrete. Pattern: ${this.pattern.notes.length} notes, ${this.pattern.duration}ms`);
   }
 
   // Demarrer la lecture en boucle
   startPlayback() {
     if (!this.pattern || this.pattern.notes.length === 0) {
-      console.warn('Aucun pattern a jouer');
       return;
     }
 
@@ -95,8 +89,6 @@ export class SequencerService {
     this.isPaused = false;
     this.playbackStartTime = Date.now();
     this.playPattern();
-    
-    console.log('Lecture demarree');
   }
 
   // Mettre en pause
@@ -109,8 +101,6 @@ export class SequencerService {
     
     // Annuler tous les timeouts programmes
     this.clearScheduledNotes();
-    
-    console.log('Lecture en pause');
   }
 
   // Reprendre la lecture
@@ -129,8 +119,6 @@ export class SequencerService {
     
     // Reprendre la lecture
     this.playPatternFromTime(elapsedBeforePause % this.pattern.duration);
-    
-    console.log('Lecture reprise');
   }
 
   // Jouer le pattern une fois
@@ -208,8 +196,6 @@ export class SequencerService {
     this.isPaused = false;
     
     this.clearScheduledNotes();
-    
-    console.log('Lecture arretee');
   }
 
   // Effacer le pattern
@@ -217,13 +203,11 @@ export class SequencerService {
     this.stopPlayback();
     this.pattern = null;
     this.currentPatternIndex = null;
-    console.log('Pattern efface');
   }
 
   // Sauvegarder le pattern actuel
   saveCurrentPattern(name?: string) {
     if (!this.pattern) {
-      console.warn('Aucun pattern a sauvegarder');
       return;
     }
 
@@ -245,13 +229,11 @@ export class SequencerService {
     }
 
     this.savePatternsToStorage();
-    console.log('Pattern sauvegarde:', this.pattern.name);
   }
 
   // Charger un pattern sauvegarde
   loadPattern(index: number) {
     if (index < 0 || index >= this.savedPatterns.length) {
-      console.warn('Index de pattern invalide');
       return;
     }
 
@@ -259,8 +241,6 @@ export class SequencerService {
     this.pattern = { ...this.savedPatterns[index] };
     this.currentPatternIndex = index;
     this.bpm = this.pattern.bpm;
-    
-    console.log('Pattern charge:', this.pattern.name);
   }
 
   // Supprimer un pattern sauvegarde
@@ -277,7 +257,6 @@ export class SequencerService {
     }
 
     this.savePatternsToStorage();
-    console.log('Pattern supprime');
   }
 
   // Sauvegarder dans localStorage
@@ -295,7 +274,6 @@ export class SequencerService {
       const stored = localStorage.getItem('sequencer-patterns');
       if (stored) {
         this.savedPatterns = JSON.parse(stored);
-        console.log(`${this.savedPatterns.length} patterns charges`);
       }
     } catch (error) {
       console.error('Erreur chargement localStorage:', error);
@@ -336,6 +314,5 @@ export class SequencerService {
     this.stopPlayback();
     this.pattern = pattern;
     this.bpm = pattern.bpm;
-    console.log('Pattern importe:', pattern);
   }
 }

@@ -208,10 +208,7 @@ export class AudioService {
   playSample(sampleIndex: number): void {
     const buffer = this.padBuffers.get(sampleIndex);
     if (buffer) {
-      console.log('Lecture sample pad', sampleIndex);
       this.playBuffer(buffer);
-    } else {
-      console.warn('Pas de buffer pour le pad', sampleIndex);
     }
   }
   

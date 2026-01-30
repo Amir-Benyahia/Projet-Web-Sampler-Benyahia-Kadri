@@ -12,28 +12,28 @@ import { CommonModule } from '@angular/common';
 export class HomeComponent {
   features = [
     {
-      icon: '⚙️',
+      icon: '',
       title: 'Gestion des Presets',
       description: 'Interface d\'administration pour créer, modifier et supprimer vos presets audio',
       link: '/admin',
       linkText: 'Gérer les presets'
     },
     {
-      icon: '🎹',
+      icon: '',
       title: 'Sampler Audio',
       description: 'Jouez vos samples avec une grille interactive et des contrôles en temps réel',
       link: '/sampler',
       linkText: 'Ouvrir le sampler'
     },
     {
-      icon: '🎼',
+      icon: '',
       title: 'Séquenceur',
       description: 'Créez des patterns rythmiques avec notre séquenceur pas-à-pas',
       link: '/sequencer',
       linkText: 'Créer des patterns'
     },
     {
-      icon: '🎛️',
+      icon: '',
       title: 'Effets Audio',
       description: 'Appliquez des effets (reverb, delay, filters) à vos samples en temps réel',
       link: '/effects',

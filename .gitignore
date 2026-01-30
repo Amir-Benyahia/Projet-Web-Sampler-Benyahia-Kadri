@@ -8,3 +8,8 @@ dist/
 *.swp
 *.swo
 *~
+
+# Enregistrements audio
+**/recordings/*.webm
+**/recordings/*.wav
+**/recordings/*.mp3
