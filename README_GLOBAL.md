@@ -9,13 +9,13 @@
 
 ## Table des matières
 - [Présentation générale](#présentation-générale)
+- [Déploiement en ligne (Render)](#déploiement-en-ligne-render)
 - [Architecture du projet](#architecture-du-projet)
 - [Technologies et méthodologies](#technologies-et-méthodologies)
 - [Répartition des tâches](#répartition-des-tâches)
 - [Utilisation de l'IA](#utilisation-de-lia)
 - [Features implémentées](#features-implémentées)
 - [Manuel d'utilisation](#manuel-dutilisation)
-- [Déploiement](#déploiement)
 - [Structure des dossiers](#structure-des-dossiers)
 
 ---
@@ -28,6 +28,117 @@ Ce projet est un **sampler audio professionnel** développé en trois versions :
 3. **Frontend Angular** : Version moderne avec architecture composants
 
 L'objectif est de créer un instrument de musique virtuel permettant de charger, éditer et jouer des échantillons audio (samples), d'enregistrer des séquences, et d'appliquer des effets audio en temps réel.
+
+---
+
+## Déploiement en ligne (Render)
+
+Le projet a été déployé sur la plateforme Render pour permettre une démonstration en ligne sans nécessiter d'installation locale.
+
+### Liens de démonstration
+
+- **Frontend Vanilla JS** : [https://projet-web-sampler.onrender.com/](https://projet-web-sampler.onrender.com/)
+- **Backend API** : [https://sampler-backend-benyahia-kadri.onrender.com/](https://sampler-backend-benyahia-kadri.onrender.com/)
+- **Base de données** : MongoDB Atlas (cluster cloud gratuit)
+
+### Procédure de déploiement
+
+#### 1. Déploiement du backend (Web Service)
+
+Étapes réalisées pour le déploiement du backend :
+
+1. Création d'un compte Render et connexion au dépôt GitHub
+2. Configuration du service :
+   - Type : Web Service
+   - Root Directory : `back-end-NodeJS`
+   - Build Command : `npm install`
+   - Start Command : `node server.js`
+   
+3. Configuration des variables d'environnement (Settings → Environment) :
+   ```
+   MONGO_URI=mongodb+srv://amirbenyahia550_db_user:Mer.Mer.55@cluster0.hdiyjfu.mongodb.net/sampler?appName=Cluster0
+   PORT=10000
+   NODE_ENV=production
+   ```
+
+4. Configuration MongoDB Atlas :
+   - Création d'un cluster gratuit M0
+   - Ajout d'un utilisateur avec authentification
+   - Configuration de l'accès réseau (0.0.0.0/0 pour autoriser les connexions Render)
+   - Seeding de la base avec 5 presets initiaux (808, Basic Kit, Electronic, Hip-Hop, Steveland Vinyl)
+
+**Note importante** : Il est essentiel de spécifier le nom de la base de données dans l'URI MongoDB (`/sampler` avant les query parameters). Sans cette précision, MongoDB utilise la base "test" par défaut, ce qui a causé des problèmes initiaux de données vides.
+
+#### 2. Déploiement du frontend (Static Site)
+
+Configuration du site statique :
+
+1. Type de service : Static Site
+2. Root Directory : `Web-Sampler-Studio-JS`
+3. Build Command : (vide, pas de processus de build nécessaire)
+4. Publish Directory : `.` (publication de l'ensemble du répertoire)
+
+Modification du code pour la détection dynamique de l'environnement dans `index.html` :
+
+```javascript
+const baseURL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://sampler-backend-benyahia-kadri.onrender.com';
+```
+
+#### 3. Difficultés rencontrées et solutions
+
+**Problème 1 : Conflits Git avec sous-modules**
+- Situation : Les sous-dossiers contenaient leurs propres répertoires `.git/` causant des conflits lors du push
+- Solution : Suppression de tous les répertoires `.git/` à l'exception de celui à la racine du projet
+
+**Problème 2 : Base de données apparemment vide**
+- Situation : MongoDB Atlas n'affichait aucune donnée après l'exécution du script de seeding
+- Cause : L'URI de connexion ne spécifiait pas le nom de la base de données, MongoDB utilisait donc "test" par défaut
+- Solution : Ajout de `/sampler` dans l'URI avant les paramètres de requête
+
+**Problème 3 : API retournant un tableau vide**
+- Situation : L'endpoint `/api/presets` retournait `[]` malgré le seeding
+- Cause : Le fichier `.env` n'était pas chargé dans `seed.js` (contexte ES modules)
+- Solution : Ajout de `import dotenv from 'dotenv'; dotenv.config();` dans le script de seeding
+
+**Problème 4 : Latence au premier chargement**
+- Situation : Le backend s'arrête après 15 minutes d'inactivité (limitation du plan gratuit Render)
+- Conséquence : Le premier chargement nécessite 30-50 secondes (cold start)
+- Remarque : Il s'agit du comportement normal du plan gratuit, aucune solution gratuite disponible
+
+### Vérification du déploiement
+
+Pour vérifier que le déploiement fonctionne correctement :
+
+1. Test de l'API backend via curl :
+   ```bash
+   curl https://sampler-backend-benyahia-kadri.onrender.com/api/presets
+   ```
+   Doit retourner un JSON contenant 5 presets
+
+2. Test du frontend :
+   - Accéder à https://projet-web-sampler.onrender.com/
+   - Sélectionner un preset dans le menu déroulant
+   - Cliquer sur "Charger tout"
+   - Tester la lecture d'un pad
+
+### Architecture de déploiement
+
+```
+┌─────────────────┐          ┌──────────────────┐
+│   Utilisateur   │          │   MongoDB Atlas  │
+│   (Navigateur)  │          │   (Base données) │
+└────────┬────────┘          └────────▲─────────┘
+         │                            │
+         │  HTTPS                     │ MongoDB Protocol
+         ▼                            │
+┌─────────────────┐          ┌────────┴─────────┐
+│  Frontend (JS)  │◄────────►│  Backend (API)   │
+│  Render Static  │   REST   │  Render Service  │
+│  Site           │   API    │  Node.js/Express │
+└─────────────────┘          └──────────────────┘
+```
 
 ---
 
@@ -700,74 +811,6 @@ Projet_Final/
 │
 └── README_GLOBAL.md                             # Ce fichier
 ```
-
----
-
-## Déploiement
-
-### Frontend Vanilla JS hébergé sur Render
-
-Le frontend Vanilla JS est déployé en production sur **Render** (plateforme cloud).
-
-**URL de démonstration** : [https://web-sampler-studio.onrender.com](https://web-sampler-studio.onrender.com)
-
-### Configuration du déploiement
-
-**Plateforme** : Render Static Site  
-**Repository** : GitHub (synchronisation automatique)  
-**Build** : Aucun build nécessaire (vanilla JS)  
-**SSL** : HTTPS automatique avec certificat gratuit  
-**CDN** : Distribution mondiale pour performances optimales
-
-### Guide de déploiement complet
-
-Un guide détaillé étape par étape est disponible dans le fichier [DEPLOY_RENDER.md](Web-Sampler-Studio---Live-Demo-Render-/DEPLOY_RENDER.md).
-
-**Étapes résumées** :
-1. Créer un repository GitHub du projet
-2. Créer un compte sur [render.com](https://render.com)
-3. Connecter le repository via "New Static Site"
-4. Configuration :
-   - Root Directory : *vide*
-   - Build Command : *vide*
-   - Publish Directory : `.`
-5. Déploiement automatique à chaque push Git
-
-### Déploiements automatiques
-
-Chaque modification poussée sur GitHub redéploie automatiquement :
-
-```bash
-git add .
-git commit -m "Update: nouvelle feature"
-git push origin main
-# Render redéploie automatiquement en ~2 minutes
-```
-
-### Avantages du déploiement Render
-
-✅ **Gratuit** pour les sites statiques (pas de carte bancaire requise)  
-✅ **CI/CD automatique** via intégration GitHub  
-✅ **SSL/HTTPS gratuit** avec renouvellement automatique  
-✅ **CDN global** pour chargement rapide mondial  
-✅ **100 GB bande passante/mois** (largement suffisant)  
-✅ **Logs en temps réel** pour debugging  
-✅ **Pas de maintenance** serveur
-
-### Monitoring
-
-**Dashboard Render** : https://dashboard.render.com  
-**Logs** : Accessibles en temps réel depuis le dashboard  
-**Metrics** : Trafic, bande passante, temps de réponse
-
-### Backend (optionnel)
-
-Le backend Node.js peut également être déployé sur Render :
-- **Type** : Web Service (Node.js)
-- **Base de données** : MongoDB Atlas (cloud)
-- **Free tier** : S'arrête après 15 min d'inactivité (redémarre au premier accès)
-
-Voir le [guide de déploiement](Web-Sampler-Studio---Live-Demo-Render-/DEPLOY_RENDER.md) pour les détails complets.
 
 ---
 

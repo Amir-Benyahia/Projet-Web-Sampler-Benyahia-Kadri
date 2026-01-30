@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 import Preset from "./models/presets.js";
 import fs from "fs";
 import path from "path";
+import dotenv from "dotenv";
+
+// Charger les variables d'environnement depuis .env
+dotenv.config();
 
 // URL de connexion a MongoDB (locale ou cloud)
 const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/sampler";
@@ -48,5 +52,12 @@ for (const file of presetFiles) {
 
 // Affichage du resultat final
 console.log(`\n${count} presets inseres avec succes dans la base de donnees`);
-process.exit();
+
+// Verification: compter les documents reellement dans la base
+const verifyCount = await Preset.countDocuments();
+console.log(`Verification: ${verifyCount} presets trouves dans MongoDB`);
+
+// Deconnexion propre
+await mongoose.disconnect();
+console.log("Deconnecte de MongoDB");
 

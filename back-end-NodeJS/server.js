@@ -334,5 +334,60 @@ app.get("/api/proxy-audio", async (req, res) => {
   }
 });
 
+// === ROUTES POUR LA GESTION DES RECORDINGS ===
+
+// Route GET pour lister tous les fichiers enregistrés dans /public/presets/recordings
+app.get("/api/recordings", async (req, res) => {
+  try {
+    const fs = await import('fs/promises');
+    const recordingsPath = path.join(process.cwd(), 'public', 'presets', 'recordings');
+    
+    // Vérifier si le dossier existe
+    try {
+      await fs.access(recordingsPath);
+    } catch {
+      return res.json({ recordings: [] });
+    }
+    
+    // Lire tous les fichiers dans le dossier recordings
+    const files = await fs.readdir(recordingsPath);
+    const recordings = files
+      .filter(file => file.endsWith('.webm') || file.endsWith('.wav') || file.endsWith('.mp3'))
+      .map(file => ({
+        name: file.replace(/\.(webm|wav|mp3)$/, ''),
+        url: `/presets/recordings/${file}`,
+        date: Date.now() // Pourrait être amélioré avec fs.stat pour la vraie date
+      }));
+    
+    res.json({ recordings });
+  } catch (error) {
+    console.error("Erreur lecture recordings:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+// Route DELETE pour supprimer un recording
+app.delete("/api/recordings", async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ error: "URL requise" });
+    }
+    
+    // Extraire le nom du fichier depuis l'URL
+    const filename = url.split('/').pop();
+    const filePath = path.join(process.cwd(), 'public', 'presets', 'recordings', filename);
+    
+    const fs = await import('fs/promises');
+    await fs.unlink(filePath);
+    
+    res.json({ ok: true, message: "Recording supprimé" });
+  } catch (error) {
+    console.error("Erreur suppression recording:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 // Demarrage du serveur Express
 app.listen(PORT, () => console.log(`Backend running on port ${PORT}`));

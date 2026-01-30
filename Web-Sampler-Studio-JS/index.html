@@ -883,52 +883,129 @@
         alert('Sequence sauvegardee !');
       };
       
-      function updateSequenceLibraryCount() {
+      // === LIBRARY : GESTION DES RECORDINGS ===
+      let myRecordings = [];
+      let currentPreviewAudio = null;
+      
+      async function loadMyRecordings() {
+        try {
+          const response = await fetch(`${baseURL}/api/recordings`);
+          if (!response.ok) {
+            myRecordings = [];
+            return;
+          }
+          const data = await response.json();
+          myRecordings = data.recordings || [];
+          updateRecordingsLibraryCount();
+        } catch (error) {
+          console.log('Impossible de charger les recordings:', error);
+          myRecordings = [];
+        }
+      }
+      
+      function updateRecordingsLibraryCount() {
         const btn = document.getElementById('showSequenceList');
-        btn.textContent = `Library (${savedSequences.length})`;
+        btn.textContent = `Library (${myRecordings.length})`;
       }
       
       function renderSequenceList() {
         const container = document.getElementById('sequenceList');
-        if (savedSequences.length === 0) {
-          container.innerHTML = '<p style="text-align: center; color: #94a3b8;">Aucune sequence sauvegardee</p>';
+        if (myRecordings.length === 0) {
+          container.innerHTML = '<p style="text-align: center; color: #94a3b8;">Aucun enregistrement. Utilisez "Record" pour créer des sons.</p>';
           return;
         }
         
-        container.innerHTML = savedSequences.map((seq, index) => `
-          <div style="background: rgba(30, 41, 59, 0.5); padding: 12px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <strong>${seq.name}</strong>
-              <div style="color: #94a3b8; font-size: 0.9em;">
-                ${seq.events.length} evenements • ${new Date(seq.date).toLocaleDateString()}
+        container.innerHTML = myRecordings.map((rec, index) => `
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 12px; margin-bottom: 10px; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div>
+                <strong>${rec.name || 'Recording ' + (index + 1)}</strong>
+                <div style="color: #94a3b8; font-size: 0.9em;">
+                  ${rec.preset || 'Sans preset'} • ${new Date(rec.date || Date.now()).toLocaleDateString()}
+                </div>
               </div>
             </div>
-            <div>
-              <button onclick="loadSavedSequence(${index})" class="btn" style="margin-right: 5px;">Charger</button>
-              <button onclick="deleteSavedSequence(${index})" class="btn stopBtn">Supprimer</button>
+            <div style="display: flex; gap: 5px;">
+              <button onclick="previewRecording('${rec.url}')" class="btn" style="flex: 1;">▶ Preview</button>
+              <button onclick="loadRecordingToPad('${rec.url}', '${rec.name}')" class="btn" style="flex: 1; background: #10b981;">Load to Pad</button>
+              <button onclick="deleteRecording('${rec.url}')" class="btn stopBtn">🗑</button>
             </div>
           </div>
         `).join('');
       }
       
-      window.loadSavedSequence = (index) => {
-        recordedSequence = [...savedSequences[index].events];
-        playSequenceBtn.disabled = false;
-        saveSequenceBtn.disabled = false;
-        clearSequenceBtn.disabled = false;
-        sequenceStatus.textContent = `Sequence chargee: ${recordedSequence.length} evenements`;
-        document.getElementById('sequenceListModal').classList.add('hidden');
+      window.previewRecording = async (url) => {
+        try {
+          if (currentPreviewAudio) {
+            currentPreviewAudio.pause();
+            currentPreviewAudio = null;
+          }
+          
+          const fullUrl = url.startsWith('http') ? url : `${baseURL}${url}`;
+          const response = await fetch(fullUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+          
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(ctx.destination);
+          source.start(0);
+          currentPreviewAudio = source;
+        } catch (error) {
+          console.error('Erreur preview:', error);
+          alert('Impossible de lire ce son');
+        }
       };
       
-      window.deleteSavedSequence = (index) => {
-        if (!confirm('Supprimer cette sequence ?')) return;
-        savedSequences.splice(index, 1);
-        localStorage.setItem('savedSequences', JSON.stringify(savedSequences));
-        updateSequenceLibraryCount();
-        renderSequenceList();
+      window.loadRecordingToPad = async (url, name) => {
+        try {
+          if (currentPadIndex === null) {
+            const padNum = prompt('Quel pad ? (0-15)', '0');
+            currentPadIndex = parseInt(padNum, 10);
+            if (isNaN(currentPadIndex) || currentPadIndex < 0 || currentPadIndex > 15) {
+              alert('Pad invalide');
+              return;
+            }
+          }
+          
+          const fullUrl = url.startsWith('http') ? url : `${baseURL}${url}`;
+          const response = await fetch(fullUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+          
+          sampler.buffers[currentPadIndex] = audioBuffer;
+          sampler.names[currentPadIndex] = name || `Recording ${currentPadIndex}`;
+          
+          samplerGUI.createButtons();
+          refreshPadKeyCorners();
+          samplerGUI.selectPad?.(currentPadIndex);
+          handlePadSelected(currentPadIndex, false);
+          
+          document.getElementById('sequenceListModal').classList.add('hidden');
+          globalStatus.textContent = `"${name}" chargé dans pad ${currentPadIndex}`;
+        } catch (error) {
+          console.error('Erreur chargement:', error);
+          alert('Impossible de charger ce son');
+        }
       };
       
-      document.getElementById('showSequenceList').onclick = () => {
+      window.deleteRecording = async (url) => {
+        if (!confirm('Supprimer cet enregistrement ?')) return;
+        try {
+          await fetch(`${baseURL}/api/recordings`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+          });
+          await loadMyRecordings();
+          renderSequenceList();
+        } catch (error) {
+          console.error('Erreur suppression:', error);
+        }
+      };
+      
+      document.getElementById('showSequenceList').onclick = async () => {
+        await loadMyRecordings();
         renderSequenceList();
         document.getElementById('sequenceListModal').classList.remove('hidden');
       };
@@ -937,7 +1014,8 @@
         document.getElementById('sequenceListModal').classList.add('hidden');
       };
       
-      updateSequenceLibraryCount();
+      // Charger la liste au démarrage
+      loadMyRecordings();
       
       // Initialisation du support MIDI (optionnel mais souhaite)
       initMIDI();
@@ -1070,6 +1148,9 @@
             });
             if (!r.ok) throw new Error("upload failed");
             recordModalStatus.textContent = "Ajoute au preset avec succes";
+            
+            // Recharger la liste des recordings dans la Library
+            await loadMyRecordings();
           } else {
             const ptype = (newPresetType.value || "").trim();
             const pname = (newPresetName.value || "").trim();
@@ -1093,6 +1174,9 @@
             });
             if (!r.ok) throw new Error("create failed");
             recordModalStatus.textContent = "Preset cree avec succes";
+            
+            // Recharger la liste des recordings dans la Library
+            await loadMyRecordings();
           }
 
           // refresh preset lists
