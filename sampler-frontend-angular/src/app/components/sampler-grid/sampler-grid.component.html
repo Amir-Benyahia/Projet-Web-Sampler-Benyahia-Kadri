@@ -1,0 +1,13 @@
+<div class="sampler-grid-container">
+  <h2>Sampler Grid (4x4)</h2>
+  
+  <div class="grid">
+    <div 
+      *ngFor="let pad of pads"
+      [class]="getPadClass(pad)"
+      (click)="playPad(pad.index)">
+      
+      <div class="pad-name">{{ getPadLabel(pad) }}</div>
+    </div>
+  </div>
+</div>

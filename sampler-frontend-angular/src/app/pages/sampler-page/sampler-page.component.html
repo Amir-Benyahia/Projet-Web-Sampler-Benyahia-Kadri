@@ -1,0 +1,95 @@
+<div class="sampler-page">
+  <div class="page-header">
+    <h1>Sampler Audio</h1>
+    <p>Sélectionnez un preset et cliquez sur les pads pour jouer les sons</p>
+  </div>
+
+  <div class="controls-bar">
+    <div class="preset-selector" *ngIf="!isLoading">
+      <label>Choisir un preset :</label>
+      <select [(ngModel)]="selectedPreset" (change)="selectPreset(selectedPreset!)">
+        <option [ngValue]="null">-- Sélectionnez un preset --</option>
+        <option *ngFor="let preset of presets" [ngValue]="preset">
+          {{ preset.name }} ({{ preset.samples.length }} samples)
+        </option>
+      </select>
+    </div>
+
+    <button 
+      class="record-button" 
+      (click)="openRecordingModal()"
+      [disabled]="!selectedPreset"
+      title="Enregistrer votre voix et l'ajouter au preset">
+      Enregistrer un sample vocal
+    </button>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    <p>Chargement des presets...</p>
+  </div>
+
+  <div *ngIf="selectedPreset" class="sampler-container">
+    <app-sampler-grid [samples]="getSamples()"></app-sampler-grid>
+  </div>
+
+  <div *ngIf="!selectedPreset && !isLoading" class="no-preset">
+    <p>Aucun preset sélectionné. Veuillez en choisir un dans la liste ci-dessus.</p>
+  </div>
+
+  <!-- Modal d'enregistrement vocal -->
+  <div class="recording-modal-overlay" *ngIf="showRecordingModal" (click)="closeRecordingModal()">
+    <div class="recording-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Enregistrement Vocal</h2>
+        <button class="close-button" (click)="closeRecordingModal()">X</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- État: Pas encore d'enregistrement -->
+        <div *ngIf="!isRecording && !recordedBlob" class="recording-start">
+          <div class="microphone-icon">MIC</div>
+          <p>Cliquez sur le bouton ci-dessous pour commencer l'enregistrement</p>
+          <button class="btn-start-recording" (click)="startRecording()">
+            Demarrer l'enregistrement
+          </button>
+        </div>
+
+        <!-- État: En cours d'enregistrement -->
+        <div *ngIf="isRecording" class="recording-active">
+          <div class="recording-indicator">
+            <span class="red-dot"></span>
+            <span class="recording-text">Enregistrement en cours...</span>
+          </div>
+          <div class="timer">{{ getFormattedTime() }}</div>
+          <div class="recording-controls">
+            <button class="btn-stop-recording" (click)="stopRecording()">
+              Arreter
+            </button>
+            <button class="btn-cancel-recording" (click)="cancelRecording()">
+              Annuler
+            </button>
+          </div>
+        </div>
+
+        <!-- État: Enregistrement terminé -->
+        <div *ngIf="!isRecording && recordedBlob" class="recording-complete">
+          <div class="success-icon">OK</div>
+          <p>Enregistrement termine ! Duree : {{ getFormattedTime() }}</p>
+          <div class="playback-controls">
+            <button class="btn-play" (click)="playRecording()">
+              Ecouter
+            </button>
+            <button class="btn-retry" (click)="openRecordingModal()">
+              Reessayer
+            </button>
+          </div>
+          <div class="save-controls">
+            <button class="btn-save" (click)="addRecordingToPreset()">
+              Ajouter au preset
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

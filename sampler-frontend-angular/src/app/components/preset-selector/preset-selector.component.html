@@ -1,0 +1,222 @@
+<div class="preset-manager-container">
+  <div class="header">
+    <h2>Liste des Presets</h2>
+    <div class="header-actions">
+      <button class="btn btn-primary" (click)="showCreatePresetForm()" *ngIf="!showCreateForm">
+        <span class="icon">+</span>
+        Nouveau Preset
+      </button>
+      <button class="btn btn-secondary" (click)="toggleHistory()">
+        <span class="icon">📜</span>
+        {{ showHistory ? 'Masquer' : 'Historique' }}
+      </button>
+      <button class="btn btn-secondary" (click)="loadPresets()" [disabled]="isLoading">
+        <span class="icon">↻</span>
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Historique des modifications -->
+  <div *ngIf="showHistory" class="history-panel">
+    <div class="history-header">
+      <h3>Historique des modifications</h3>
+      <p class="history-count">{{ history.length }} action(s) récente(s)</p>
+    </div>
+    <div class="history-list">
+      <div *ngFor="let entry of history" class="history-item" [style.border-left-color]="getActionColor(entry.action)">
+        <div class="history-icon" [style.background-color]="getActionColor(entry.action) + '20'">
+          {{ getActionIcon(entry.action) }}
+        </div>
+        <div class="history-content">
+          <div class="history-action">
+            <strong>{{ entry.presetName }}</strong>
+          </div>
+          <div class="history-details">{{ entry.details }}</div>
+        </div>
+        <div class="history-time">{{ formatDate(entry.timestamp) }}</div>
+      </div>
+      <div *ngIf="history.length === 0" class="no-history">
+        Aucune modification récente
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulaire de création -->
+  <div *ngIf="showCreateForm" class="create-form">
+    <div class="form-header">
+      <h3>Créer un nouveau preset</h3>
+      <button class="btn-close" (click)="cancelCreate()" title="Fermer">×</button>
+    </div>
+    
+    <div class="form-body">
+      <div class="form-group">
+        <label>Nom du preset <span class="required">*</span></label>
+        <input 
+          type="text" 
+          [(ngModel)]="newPreset.name" 
+          placeholder="Exemple: Mon Preset Custom"
+          class="form-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label>Catégorie</label>
+        <select [(ngModel)]="newPreset.category" class="form-input">
+          <option value="Drumkit">Drumkit</option>
+          <option value="Electronic">Electronic</option>
+          <option value="Hip-Hop">Hip-Hop</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Samples (nom + URL)</label>
+        <div class="samples-list">
+          <div *ngFor="let sample of newPreset.samples; let i = index" class="sample-row">
+            <input 
+              type="text" 
+              [(ngModel)]="sample.name" 
+              placeholder="Nom du sample"
+              class="form-input sample-name"
+            />
+            <input 
+              type="text" 
+              [(ngModel)]="sample.url" 
+              placeholder="URL du fichier audio"
+              class="form-input sample-url"
+            />
+            <button 
+              class="btn-icon btn-remove" 
+              (click)="removeSampleRow(i)"
+              [disabled]="newPreset.samples.length === 1"
+              title="Retirer"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-link" (click)="addSampleRow()">
+          + Ajouter un sample
+        </button>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-success" (click)="createPreset()">
+          Créer le preset
+        </button>
+        <button class="btn btn-secondary" (click)="cancelCreate()">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="isLoading" class="loading">
+    <div class="spinner"></div>
+    <p>Chargement des presets...</p>
+  </div>
+
+  <div *ngIf="error" class="error">
+    <p>{{ error }}</p>
+    <button class="btn btn-primary" (click)="loadPresets()">Réessayer</button>
+  </div>
+
+  <div *ngIf="!isLoading && !error" class="presets-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Catégorie</th>
+          <th>Samples</th>
+          <th class="actions-header">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let preset of presets" class="preset-row">
+          <td class="preset-name">
+            @if (isEditing(preset)) {
+              <input 
+                type="text" 
+                [(ngModel)]="editingName"
+                (keyup.enter)="savePresetName(preset)"
+                (keyup.escape)="cancelEditing()"
+                class="edit-input"
+                autofocus
+              />
+            } @else {
+              <div class="preset-info">
+                <strong>{{ preset.name }}</strong>
+                <button 
+                  class="btn-validate-urls" 
+                  (click)="validatePresetUrls(preset)"
+                  title="Valider les URLs"
+                >
+                  🔍
+                </button>
+              </div>
+              <div class="samples-preview" *ngIf="preset.samples && preset.samples.length > 0">
+                <div *ngFor="let sample of preset.samples.slice(0, 3)" class="sample-item">
+                  <button 
+                    class="btn-play" 
+                    (click)="playSample(sample.url)"
+                    [disabled]="isPlaying(sample.url)"
+                    title="Jouer {{ sample.name }}"
+                  >
+                    {{ isPlaying(sample.url) ? 'Stop' : 'Play' }}
+                  </button>
+                  <span class="sample-name-text">{{ sample.name }}</span>
+                  <span class="url-status-inline" *ngIf="isUrlValid(sample.url) !== undefined">
+                    {{ isUrlValid(sample.url) ? 'OK' : 'KO' }}
+                  </span>
+                </div>
+                <div *ngIf="preset.samples.length > 3" class="more-samples">
+                  +{{ preset.samples.length - 3 }} sample(s)
+                </div>
+              </div>
+            }
+          </td>
+          <td>
+            <span class="badge">{{ preset.category || 'Other' }}</span>
+          </td>
+          <td class="samples-count">
+            {{ getSampleCount(preset) }} sample{{ getSampleCount(preset) > 1 ? 's' : '' }}
+          </td>
+          <td class="actions">
+            @if (isEditing(preset)) {
+              <button class="btn-icon btn-save" (click)="savePresetName(preset)" title="Sauvegarder">
+                ✓
+              </button>
+              <button class="btn-icon btn-cancel" (click)="cancelEditing()" title="Annuler">
+                ×
+              </button>
+            } @else {
+              <button class="btn-icon btn-edit" (click)="startEditing(preset)" title="Renommer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="btn-icon btn-delete" (click)="deletePreset(preset)" title="Supprimer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            }
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="presets.length === 0" class="no-presets">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <p>Aucun preset disponible</p>
+      <p class="hint">Vérifiez que le backend est démarré et que des presets existent dans MongoDB.</p>
+    </div>
+  </div>
+</div>

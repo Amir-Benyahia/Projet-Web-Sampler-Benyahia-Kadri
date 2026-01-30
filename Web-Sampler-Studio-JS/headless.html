@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sampler – Headless Test</title>
+  <style>
+    body { font-family: system-ui, Arial; padding: 20px; }
+    #pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 520px; }
+    button { padding: 14px 12px; font-size: 16px; border-radius: 12px; border: 0; cursor: pointer; }
+    .status { margin-top: 12px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <h2>Headless Sampler Test (sans SamplerGUI)</h2>
+  <p>
+    Cette page teste le moteur audio sans interface graphique complete.<br>
+    DEMONSTRATION DE LA SEPARATION GUI/MOTEUR : le SamplerEngine fonctionne independamment.<br>
+    Pas de canvas, pas de waveform, juste des boutons simples pour tester le playback.
+  </p>
+
+  <label for="presetSelect">Preset :</label>
+  <select id="presetSelect">
+    <option value="" selected disabled>Choisir un preset</option>
+  </select>
+
+  <button id="loadAllBtn">Charger tout</button>
+  <div class="status" id="status"></div>
+
+  <h3>Pads</h3>
+  <div id="pads"></div>
+
+  <script type="module">
+    import SamplerEngine from "./js/SamplerEngine.js";
+
+    // URL du serveur backend (localhost pour developpement)
+    const baseURL = "http://localhost:3000";
+    
+    // Selection des elements DOM
+    const presetSelect = document.getElementById("presetSelect");
+    const padsDiv = document.getElementById("pads");
+    const loadAllBtn = document.getElementById("loadAllBtn");
+    const statusEl = document.getElementById("status");
+
+    // Creation du contexte audio Web Audio API
+    const ctx = new AudioContext();
+
+    // Initialisation du moteur de sampler
+    // On passe des callbacks simples qui loggent dans la console
+    // Dans la version complete, ces callbacks mettraient a jour la GUI
+    const sampler = new SamplerEngine(ctx, {
+      onStatus: (i, s) => console.log("status", i, s),
+      onProgress: (i, r, t) => console.log("progress", i, r, t),
+      onPlay: (i) => console.log("play", i)
+    });
+
+    let presets = [];
+
+    // Fonction pour recuperer la liste des presets depuis le serveur
+    async function fetchPresets() {
+      const res = await fetch(`${baseURL}/api/presets`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    // Construction des boutons de pads (version simplifiee sans progression ni canvas)
+    function buildPads(names) {
+      padsDiv.innerHTML = "";
+      names.forEach((name, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = name || `Pad ${i}`;
+        
+        // Au clic, jouer le son du pad
+        btn.onclick = async () => {
+          // Reprise du contexte audio si suspendu (politique navigateur)
+          if (ctx.state === "suspended") await ctx.resume();
+          sampler.play(i);
+        };
+        
+        padsDiv.appendChild(btn);
+      });
+    }
+
+    // Chargement d'un preset specifique
+    function loadPreset(presetIndex) {
+      const preset = presets[presetIndex];
+      if (!preset) return;
+
+      // Construction des URLs completes des samples
+      const urls = preset.samples.map(s => `${baseURL}/presets/${s.url.replace(/^\.\//, "")}`);
+      const names = preset.samples.map(s => s.name);
+
+      // Mise a jour du moteur avec les nouveaux samples
+      sampler.updateSamples(urls, names);
+      
+      // Reconstruction des boutons avec les nouveaux noms
+      buildPads(names);
+
+      statusEl.textContent = `Preset selectionne: ${preset.name} (${names.length} sons)`;
+    }
+
+    // Chargement initial de la liste des presets
+    presets = await fetchPresets();
+
+    // Construction du menu deroulant dynamiquement
+    presets.forEach((p, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = p.name;
+      presetSelect.appendChild(opt);
+    });
+
+    // Gestion du changement de preset
+    presetSelect.onchange = (e) => loadPreset(parseInt(e.target.value, 10));
+
+    // Bouton pour charger tous les sons en parallele
+    loadAllBtn.onclick = async () => {
+      loadAllBtn.disabled = true;
+      statusEl.textContent = "Chargement des sons…";
+      
+      // Chargement en parallele de tous les samples
+      await sampler.loadAllParallel();
+      
+      statusEl.textContent = "Sons charges. Clique sur les pads pour jouer.";
+      loadAllBtn.disabled = false;
+    };
+  </script>
+</body>
+</html>

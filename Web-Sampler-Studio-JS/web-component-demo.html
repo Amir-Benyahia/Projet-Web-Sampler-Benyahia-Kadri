@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Component Sampler - Demo</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: white;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .controls {
+      text-align: center;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    #sampler-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    
+    .info {
+      text-align: center;
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 12px;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    code {
+      background: rgba(15, 23, 42, 0.8);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #60a5fa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sampler Web Component - Demonstration</h1>
+  
+  <div class="info">
+    <p><strong>Point 11 : Web Component</strong></p>
+    <p>Cette page demonstre l'utilisation du sampler comme un composant web reutilisable.</p>
+    <p>Code HTML simple : <code>&lt;sampler-component&gt;&lt;/sampler-component&gt;</code></p>
+  </div>
+  
+  <div class="controls">
+    <button onclick="samplerComponent.loadPreset('808')">Charger 808</button>
+    <button onclick="samplerComponent.loadPreset('hip-hop')">Charger Hip-Hop</button>
+    <button onclick="samplerComponent.playPad(0)">Jouer Pad 0</button>
+    <button onclick="samplerComponent.stopAll()">Stop All</button>
+  </div>
+  
+  <div id="sampler-container">
+    <!-- Le Web Component s'insere ici -->
+    <sampler-component id="samplerComponent"></sampler-component>
+  </div>
+  
+  <div class="info">
+    <h3>Avantages du Web Component</h3>
+    <ul style="text-align: left; display: inline-block;">
+      <li><strong>Encapsulation</strong> : Le CSS et le DOM sont isoles du reste de la page</li>
+      <li><strong>Reutilisabilite</strong> : Utilisable sur plusieurs pages ou projets</li>
+      <li><strong>API propre</strong> : Methodes publiques (loadPreset, playPad, stopAll)</li>
+      <li><strong>Shadow DOM</strong> : Pas de conflits de styles ou de scripts</li>
+      <li><strong>Standard Web</strong> : Fonctionne sans framework (Vanilla JS)</li>
+    </ul>
+  </div>
+  
+  <!-- Import du Web Component -->
+  <script type="module">
+    import SamplerComponent from './sampler-component.js';
+    
+    // Le composant est automatiquement enregistre via customElements.define()
+    // dans sampler-component.js
+    
+    // Exemple d'interaction programmatique
+    const samplerComponent = document.getElementById('samplerComponent');
+    
+    // Ecoute d'evenements personnalises (si implementes)
+    samplerComponent.addEventListener('padPlayed', (e) => {
+      console.log('Pad joue:', e.detail.padIndex);
+    });
+  </script>
+</body>
+</html>

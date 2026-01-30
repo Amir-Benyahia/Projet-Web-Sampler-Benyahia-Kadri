@@ -1,0 +1,22 @@
+<div class="home-container">
+  <header class="hero">
+    <h1 class="hero-title">Web Sampler Studio</h1>
+    <p class="hero-description">
+      Gerez vos presets, jouez avec des samples audio et creez des patterns rythmiques
+    </p>
+  </header>
+
+  <section class="features">
+    <h2 class="section-title">Fonctionnalites</h2>
+    <div class="features-grid">
+      <div *ngFor="let feature of features" class="feature-card">
+        <div class="feature-icon">{{ feature.icon }}</div>
+        <h3 class="feature-title">{{ feature.title }}</h3>
+        <p class="feature-description">{{ feature.description }}</p>
+        <a [routerLink]="feature.link" class="feature-link">
+          {{ feature.linkText }} →
+        </a>
+      </div>
+    </div>
+  </section>
+</div>

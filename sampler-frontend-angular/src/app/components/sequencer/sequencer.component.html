@@ -1,0 +1,162 @@
+<div class="sequencer-page">
+  <div class="sequencer-container">
+    <h3>Sequencer / Loop</h3>
+    
+    <div class="sequencer-controls">
+      <!-- Boutons de controle -->
+      <div class="control-buttons">
+        <button 
+          class="btn-record"
+          [class.active]="sequencerService.isRecording"
+          (click)="onRecord()"
+          [disabled]="sequencerService.isPlaying">
+          {{ sequencerService.isRecording ? 'Arreter' : 'Enregistrer' }}
+        </button>
+
+        <button 
+          class="btn-play"
+          [class.active]="sequencerService.isPlaying && !sequencerService.isPaused"
+          (click)="onPlay()"
+          [disabled]="!hasPattern || sequencerService.isRecording">
+          {{ sequencerService.isPlaying && !sequencerService.isPaused ? 'Stop' : sequencerService.isPaused ? 'Reprendre' : 'Lecture' }}
+        </button>
+
+        <button 
+          class="btn-pause"
+          (click)="onPause()"
+          [disabled]="!sequencerService.isPlaying || sequencerService.isPaused || sequencerService.isRecording">
+          Pause
+        </button>
+
+        <button 
+          class="btn-clear"
+          (click)="onClear()"
+          [disabled]="!hasPattern || sequencerService.isRecording || sequencerService.isPlaying">
+          Effacer
+        </button>
+
+        <button 
+          class="btn-library"
+          (click)="togglePatternsList()"
+          [class.active]="showPatternsList">
+          Bibliotheque ({{ savedPatterns.length }})
+        </button>
+      </div>
+
+      <!-- Controle BPM -->
+      <div class="bpm-control">
+        <label for="bpm">Tempo (BPM):</label>
+        <input 
+          type="range" 
+          id="bpm" 
+          min="60" 
+          max="240" 
+          [(ngModel)]="bpm"
+          (input)="onBPMChange($event)"
+          [disabled]="sequencerService.isPlaying"
+        />
+        <span class="bpm-value">{{ bpm }}</span>
+      </div>
+    </div>
+
+    <!-- Informations du pattern -->
+    @if (patternInfo) {
+      <div class="pattern-info">
+        <span class="info-label">Pattern enregistre:</span>
+        <span class="info-value">{{ patternInfo.noteCount }} notes</span>
+        <span class="info-separator">•</span>
+        <span class="info-value">Duree: {{ patternInfo.duration }}s</span>
+        @if (sequencerService.isPaused) {
+          <span class="info-separator">•</span>
+          <span class="info-status paused">EN PAUSE</span>
+        }
+        @if (sequencerService.isPlaying && !sequencerService.isPaused) {
+          <span class="info-separator">•</span>
+          <span class="info-status playing">LECTURE EN COURS</span>
+        }
+      </div>
+    } @else {
+      <div class="pattern-info empty">
+        <span class="info-label">Aucun pattern enregistre</span>
+      </div>
+    }
+
+    <!-- Instructions -->
+    @if (!hasPattern && !sequencerService.isRecording && !showPatternsList) {
+      <div class="instructions">
+        <p><strong>Mode d'emploi:</strong></p>
+        <ol>
+          <li>Cliquez sur "Enregistrer"</li>
+          <li>Jouez des sons sur les pads du sampler (onglet "Sampler")</li>
+          <li>Cliquez sur "Arreter"</li>
+          <li>Utilisez "Lecture" pour rejouer votre pattern en boucle</li>
+          <li>Utilisez "Pause" et "Reprendre" pour controler la lecture</li>
+        </ol>
+      </div>
+    }
+
+    <!-- Liste des patterns sauvegardes -->
+    @if (showPatternsList) {
+      <div class="patterns-list">
+        <h4>Sequences sauvegardees</h4>
+        @if (savedPatterns.length === 0) {
+          <p class="empty-list">Aucune sequence sauvegardee</p>
+        } @else {
+          <div class="patterns-grid">
+            @for (pattern of savedPatterns; track pattern.id; let i = $index) {
+              <div 
+                class="pattern-item"
+                [class.active]="currentPatternIndex === i"
+                (click)="loadPattern(i)">
+                <div class="pattern-header">
+                  <span class="pattern-name">{{ pattern.name }}</span>
+                  <button 
+                    class="btn-delete-pattern"
+                    (click)="deletePattern(i, $event)"
+                    title="Supprimer">
+                    X
+                  </button>
+                </div>
+                <div class="pattern-details">
+                  <span>{{ pattern.notes.length }} notes</span>
+                  <span>•</span>
+                  <span>{{ (pattern.duration / 1000).toFixed(1) }}s</span>
+                  <span>•</span>
+                  <span>{{ pattern.bpm }} BPM</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Dialogue de sauvegarde -->
+  @if (showSaveDialog) {
+    <div class="modal-overlay" (click)="onCancelSave()">
+      <div class="save-dialog" (click)="$event.stopPropagation()">
+        <h3>Sauvegarder la sequence</h3>
+        <div class="form-group">
+          <label for="patternName">Nom de la sequence:</label>
+          <input 
+            type="text" 
+            id="patternName"
+            [(ngModel)]="newPatternName"
+            (keyup.enter)="onSavePattern()"
+            placeholder="Ex: Mon rythme de batterie"
+            autofocus>
+        </div>
+        <div class="dialog-buttons">
+          <button class="btn-cancel" (click)="onCancelSave()">Annuler</button>
+          <button class="btn-save" (click)="onSavePattern()" [disabled]="!newPatternName.trim()">
+            Sauvegarder
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Effets Audio -->
+  <app-audio-effects></app-audio-effects>
+</div>

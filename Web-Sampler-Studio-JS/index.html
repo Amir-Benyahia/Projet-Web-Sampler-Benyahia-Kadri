@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sampler 4×4 + Waveform</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+  <!-- Canvas de fond anime avec formes geometriques -->
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+  <!-- Interface utilisateur principale -->
+  <div id="app">
+    <h1>Sampler 4×4</h1>
+    <p>Choisissez un preset, cliquez sur un pad, et ajustez le trim sur la forme d’onde.</p>
+
+    <label for="presetSelect">Select a preset:</label>
+    <select id="presetSelect">
+      <option value="" selected disabled>Select an option</option>
+    </select>
+
+    <div id="mainContainer">
+      <div id="buttonsContainer" class="grid"></div>
+
+      <div id="rightPanel">
+        <div id="canvasContainer" class="wrapper">
+          <canvas id="myCanvas" width="800" height="300"></canvas>
+          <canvas id="myCanvasOverlay" width="800" height="300"></canvas>
+        </div>
+
+        <div id="controlsUnderWave">
+          <label class="volControl">
+            Volume Global
+            <input id="vol" type="range" min="0" max="1" step="0.01" value="1">
+          </label>
+
+          <button id="stopAllBtn" class="btn stopBtn">Stop All</button>
+          <button id="loadAllBtn" class="btn">Charger tout</button>
+          <button id="playButton" class="btn">Play</button>
+          <button id="openRecordModalBtn" class="btn">Record</button>
+          <button id="openFreesoundBtn" class="btn">Freesound</button>
+        </div>
+        
+        <!-- Effets audio par pad -->
+        <div id="padEffects">
+          <span>Pad: <span id="currentPadLabel">-</span></span>
+          <label>Volume <input id="padVolume" type="range" min="0" max="1" step="0.01" value="1"> <span id="padVolumeValue">100%</span></label>
+          <label>Pan <input id="padPan" type="range" min="-1" max="1" step="0.01" value="0"> <span id="padPanValue">Centre</span></label>
+          <label>Pitch <input id="padPitch" type="range" min="0.5" max="2" step="0.1" value="1"> <span id="padPitchValue">×1.0</span></label>
+          <button id="padReverse" class="btn" style="padding: 8px 16px; margin: 0;">Reverse</button>
+        </div>
+        
+        <!-- Sequence recording -->
+        <div id="sequenceControls" style="margin-top: 12px; padding: 12px; background: rgba(30, 41, 59, 0.3); border-radius: 8px;">
+          <button id="recordSequence" class="btn">Rec Sequence</button>
+          <button id="playSequence" class="btn" disabled>Play Sequence</button>
+          <button id="pauseSequence" class="btn" disabled>Pause</button>
+          <button id="saveSequence" class="btn" disabled>Save</button>
+          <button id="clearSequence" class="btn" disabled>Clear</button>
+          <button id="showSequenceList" class="btn">Library (0)</button>
+          <span id="sequenceStatus" style="margin-left: 12px; color: #60a5fa;">-</span>
+        </div>
+        
+        <!-- Liste des sequences sauvegardees -->
+        <div id="sequenceListModal" class="modal hidden">
+          <div class="modalCard" style="max-width: 600px;">
+            <h2>Sequences sauvegardees</h2>
+            <div id="sequenceList" style="max-height: 400px; overflow-y: auto; margin: 20px 0;"></div>
+            <button id="closeSequenceList" class="btn">Fermer</button>
+          </div>
+        </div>
+
+        <div id="globalStatus" class="status"></div>
+      </div>
+    </div>
+    
+    <!-- POINT 9 : Modal Freesound.org -->
+    <div id="freesoundModal" class="modal hidden">
+      <div class="modalCard">
+        <h2>Rechercher sur Freesound.org</h2>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 16px;">
+          Vous devez avoir une API key de <a href="https://freesound.org/apiv2/apply/" target="_blank" style="color: #60a5fa;">Freesound.org</a>
+        </p>
+        
+        <div class="row">
+          <label>
+            API Key
+            <input id="freesoundApiKey" type="text" placeholder="Votre API key Freesound.org" style="width: 100%;">
+          </label>
+        </div>
+        
+        <div class="row">
+          <label>
+            Recherche
+            <input id="freesoundQuery" type="text" placeholder="kick, snare, hihat..." style="width: 100%;">
+          </label>
+          <button id="freesoundSearchBtn" class="btn">Chercher</button>
+        </div>
+        
+        <div id="freesoundResults" style="max-height: 300px; overflow-y: auto; margin-top: 16px;"></div>
+        
+        <div class="row" style="margin-top: 16px;">
+          <button id="closeFreesoundBtn" class="btn">Fermer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fenetre modale pour l'enregistrement audio -->
+    <div id="recordModal" class="modal hidden">
+      <div class="modalCard">
+        <h2>Enregistrer un sample</h2>
+
+        <div class="row">
+          <label>
+            Action
+            <select id="recordMode">
+              <option value="existing">Ajouter à un preset existant</option>
+              <option value="new">Créer un nouveau preset</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="existingPresetBox" class="box">
+          <div class="row">
+            <label>
+              Type
+              <select id="existingTypeSelect"></select>
+            </label>
+
+            <label>
+              Preset (name)
+              <select id="existingPresetSelect"></select>
+            </label>
+          </div>
+
+          <div class="row">
+            <label>
+              Nom du sample
+              <input id="existingSampleName" type="text" placeholder="ex: clap_mic">
+            </label>
+
+            <label>
+              Pad (0-15)
+              <input id="existingPadIndex" type="number" min="0" max="15" value="0">
+            </label>
+          </div>
+        </div>
+
+        <!-- seulement inputs preset + sample + pad -->
+        <div id="newPresetBox" class="box hidden">
+          <div class="row">
+            <label>
+              Type
+              <input id="newPresetType" type="text" placeholder="ex: Drumkit">
+            </label>
+
+            <label>
+              Nom preset
+              <input id="newPresetName" type="text" placeholder="ex: My Kit">
+            </label>
+
+            <label>
+              Category
+              <input id="newPresetCategory" type="text" value="Other">
+            </label>
+          </div>
+
+          <div class="row">
+            <label>
+              Nom du sample
+              <input id="newSampleName" type="text" placeholder="ex: kick_mic">
+            </label>
+
+            <label>
+              Pad (0-15)
+              <input id="newPadIndex" type="number" min="0" max="15" value="0">
+            </label>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px">
+          <button id="recStartBtn" class="btn">Start</button>
+          <button id="recStopBtn" class="btn stopBtn" disabled>Stop</button>
+          <button id="saveRecordingBtn" class="btn" disabled>Save</button>
+          <button id="closeRecordModalBtn" class="btn stopBtn">Close</button>
+        </div>
+
+        <div id="recordModalStatus" class="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script pour l'animation de fond : carres et triangles en rotation -->
+  <script>
+    const bgCanvas = document.getElementById("bgCanvas");
+    const bctx = bgCanvas.getContext("2d", { alpha: true });
+
+    function resizeBg() {
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+    }
+    resizeBg();
+    window.addEventListener("resize", resizeBg);
+
+    const shapes = [];
+    const SHAPE_COUNT = 34;
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function spawnShapes() {
+      shapes.length = 0;
+      for (let i = 0; i < SHAPE_COUNT; i++) {
+        shapes.push({
+          x: rand(0, bgCanvas.width),
+          y: rand(0, bgCanvas.height),
+          size: rand(24, 64),
+          type: Math.random() < 0.55 ? "square" : "triangle",
+          angle: rand(0, Math.PI * 2),
+          spin: rand(-0.02, 0.02),
+          vx: rand(-0.18, 0.18),
+          vy: rand(-0.12, 0.12),
+          alpha: rand(0.08, 0.22)
+        });
+      }
+    }
+    spawnShapes();
+
+    function drawGradient() {
+      const g = bctx.createLinearGradient(0, 0, bgCanvas.width, 0);
+      g.addColorStop(0, "#000000");
+      g.addColorStop(1, "#0033cc");
+      bctx.fillStyle = g;
+      bctx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+    }
+
+    function drawSquare(s) {
+      bctx.beginPath();
+      bctx.rect(-s.size / 2, -s.size / 2, s.size, s.size);
+      bctx.stroke();
+    }
+
+    function drawTriangle(s) {
+      const h = s.size * 0.9;
+      bctx.beginPath();
+      bctx.moveTo(0, -h / 2);
+      bctx.lineTo(h / 2, h / 2);
+      bctx.lineTo(-h / 2, h / 2);
+      bctx.closePath();
+      bctx.stroke();
+    }
+
+    function step() {
+      drawGradient();
+
+      for (const s of shapes) {
+        // move
+        s.x += s.vx;
+        s.y += s.vy;
+
+        // wrap
+        if (s.x < -100) s.x = bgCanvas.width + 100;
+        if (s.x > bgCanvas.width + 100) s.x = -100;
+        if (s.y < -100) s.y = bgCanvas.height + 100;
+        if (s.y > bgCanvas.height + 100) s.y = -100;
+
+        // spin
+        s.angle += s.spin;
+
+        // draw
+        bctx.save();
+        bctx.translate(s.x, s.y);
+        bctx.rotate(s.angle);
+        bctx.globalAlpha = s.alpha;
+        bctx.strokeStyle = "#ffffff";
+        bctx.lineWidth = 2;
+
+        if (s.type === "square") drawSquare(s);
+        else drawTriangle(s);
+
+        bctx.restore();
+      }
+
+      requestAnimationFrame(step);
+    }
+    step();
+  </script>
+
+  <!-- Script principal du sampler avec imports des modules -->
+  <script type="module">
+    import SamplerEngine from './js/SamplerEngine.js';
+    import SamplerGUI from './js/SamplerGUI.js';
+    import { WaveformDrawer } from './js/waveformdrawer.js';
+    import { TrimbarsDrawer } from './js/trimbarsdrawer.js';
+    import { playSound } from './js/soundutils.js';
+    import { pixelToSeconds } from './js/utils.js';
+    import Recorder from './js/recorder.js';
+
+    let playheadRAF = null;
+    let playheadStartTime = 0;
+    let playheadDuration = 0;
+    let playheadStartX = 0;
+    let playheadEndX = 0;
+    let playheadX = null;
+
+    let currentPadIndex = null;
+    let padTrims = [];
+    const padKeys = ["z","x","c","v","a","s","d","f","q","w","e","r","1","2","3","4"];
+    const keyToPad = Object.fromEntries(padKeys.map((k,i)=>[k,i]));
+
+    const baseURL = "http://localhost:5000";
+
+    let sampler = null;
+    let samplerGUI = null;
+    let ctx, waveformDrawer, trimbarsDrawer, decodedSound;
+
+    let presetsCache = [];
+    let recorder = null;
+    let lastRecording = null;
+
+    // Variables pour les controles d'effets par pad
+    let padVolumeInput, padPanInput, padVolumeValue, padPanValue, currentPadLabel, padPitchInput, padPitchValue, padReverseBtn;
+    
+    // Stockage des effets par pad
+    let padPitchRates = new Array(16).fill(1);
+    let padReversed = new Array(16).fill(false);
+    
+    // Enregistrement de sequences
+    let isRecordingSequence = false;
+    let recordedSequence = [];
+    let sequenceStartTime = 0;
+    let isPlayingSequence = false;
+    let isPausedSequence = false;
+    let sequencePlaybackStart = 0;
+    let sequencePauseTime = 0;
+    let savedSequences = JSON.parse(localStorage.getItem('savedSequences') || '[]');
+
+    // DOM
+    const canvas = document.querySelector("#myCanvas");
+    const canvasOverlay = document.querySelector("#myCanvasOverlay");
+    const presetSelect = document.querySelector("#presetSelect");
+    const buttonsContainer = document.querySelector("#buttonsContainer");
+    const playButton = document.querySelector("#playButton");
+    const loadAllBtn = document.querySelector("#loadAllBtn");
+    const globalStatus = document.querySelector("#globalStatus");
+
+    // modal
+    const openRecordModalBtn = document.querySelector("#openRecordModalBtn");
+    const recordModal = document.querySelector("#recordModal");
+    const closeRecordModalBtn = document.querySelector("#closeRecordModalBtn");
+    const recordMode = document.querySelector("#recordMode");
+    
+    // modal freesound
+    const openFreesoundBtn = document.querySelector("#openFreesoundBtn");
+    const freesoundModal = document.querySelector("#freesoundModal");
+    const closeFreesoundBtn = document.querySelector("#closeFreesoundBtn");
+    const freesoundApiKey = document.querySelector("#freesoundApiKey");
+    const freesoundQuery = document.querySelector("#freesoundQuery");
+    const freesoundSearchBtn = document.querySelector("#freesoundSearchBtn");
+    const freesoundResults = document.querySelector("#freesoundResults");
+
+    const existingPresetBox = document.querySelector("#existingPresetBox");
+    const newPresetBox = document.querySelector("#newPresetBox");
+
+    const existingTypeSelect = document.querySelector("#existingTypeSelect");
+    const existingPresetSelect = document.querySelector("#existingPresetSelect");
+    const existingSampleName = document.querySelector("#existingSampleName");
+    const existingPadIndex = document.querySelector("#existingPadIndex");
+
+    const newPresetType = document.querySelector("#newPresetType");
+    const newPresetName = document.querySelector("#newPresetName");
+    const newPresetCategory = document.querySelector("#newPresetCategory");
+    const newSampleName = document.querySelector("#newSampleName");
+    const newPadIndex = document.querySelector("#newPadIndex");
+
+    const recStartBtn = document.querySelector("#recStartBtn");
+    const recStopBtn = document.querySelector("#recStopBtn");
+    const saveRecordingBtn = document.querySelector("#saveRecordingBtn");
+    const recordModalStatus = document.querySelector("#recordModalStatus");
+
+    playButton.disabled = true;
+
+    function openModal() {
+      recordModal.classList.remove("hidden");
+      recordModalStatus.textContent = "";
+      lastRecording = null;
+      saveRecordingBtn.disabled = true;
+      recStartBtn.disabled = false;
+      recStopBtn.disabled = true;
+      switchModalMode(); 
+    }
+
+    function closeModal() {
+      recordModal.classList.add("hidden");
+    }
+
+    function switchModalMode() {
+      const mode = recordMode.value;
+      console.log(mode);
+     if (mode === "existing") {
+        existingPresetBox.style.display = "block";
+        newPresetBox.style.display = "none";
+        } else {
+        existingPresetBox.style.display = "none";
+        newPresetBox.style.display = "block";
+            }
+    }
+    function refreshPadKeyCorners() {
+      for (let i = 0; i < 16; i++) {
+        const slot = samplerGUI?.slotEls?.[i];
+        if (slot?.keyCorner) slot.keyCorner.textContent = padKeys[i].toUpperCase();
+      }
+    }
+
+    function startPlayhead(startSec, endSec) {
+      if (!decodedSound) return;
+      if (playheadRAF) cancelAnimationFrame(playheadRAF);
+
+      playheadStartTime = performance.now();
+      playheadDuration = Math.max(0.001, endSec - startSec);
+
+      playheadStartX = (startSec / decodedSound.duration) * canvas.width;
+      playheadEndX   = (endSec   / decodedSound.duration) * canvas.width;
+
+      const animatePlayhead = () => {
+        const elapsed = (performance.now() - playheadStartTime) / 1000;
+        const progress = Math.min(1, elapsed / playheadDuration);
+        playheadX = playheadStartX + (playheadEndX - playheadStartX) * progress;
+
+        if (progress < 1) playheadRAF = requestAnimationFrame(animatePlayhead);
+        else { playheadX = null; playheadRAF = null; }
+      };
+
+      playheadRAF = requestAnimationFrame(animatePlayhead);
+    }
+
+    function animate() {
+      trimbarsDrawer.clear();
+      trimbarsDrawer.draw();
+      if (playheadX !== null) trimbarsDrawer.drawPlayhead(playheadX);
+      requestAnimationFrame(animate);
+    }
+
+    function handlePadSelected(i, autoplay = false) {
+      const buffer = sampler.buffers[i];
+      if (!buffer) {
+        globalStatus.textContent = "Son pas encore chargé. Clique 'Charger tout'.";
+        playButton.disabled = true;
+        return;
+      }
+
+      decodedSound = buffer;
+      currentPadIndex = i;
+      
+      // Mise a jour de l'affichage des effets du pad selectionne
+      // Recupere les valeurs actuelles depuis le SamplerEngine
+      const padName = sampler.names[i] || `Pad ${i}`;
+      currentPadLabel.textContent = padName;
+      
+      const currentVolume = sampler.getPadVolume(i);
+      const currentPan = sampler.getPadPan(i);
+      
+      padVolumeInput.value = currentVolume;
+      padVolumeValue.textContent = Math.round(currentVolume * 100) + "%";
+      
+      padPanInput.value = currentPan;
+      if (currentPan < -0.33) {
+        padPanValue.textContent = "Gauche";
+      } else if (currentPan > 0.33) {
+        padPanValue.textContent = "Droite";
+      } else {
+        padPanValue.textContent = "Centre";
+      }
+      
+      // Mise a jour des controles pitch et reverse
+      padPitchInput.value = padPitchRates[i];
+      padPitchValue.textContent = padPitchRates[i].toFixed(1) + "x";
+      padReverseBtn.textContent = padReversed[i] ? "✓ Reverse" : "Reverse";
+
+      let t = padTrims[i];
+      if (!t) { t = { startSec: 0, endSec: null }; padTrims[i] = t; }
+      const endSec = (t.endSec === null) ? decodedSound.duration : t.endSec;
+
+      trimbarsDrawer.leftTrimBar.x  = (t.startSec / decodedSound.duration) * canvas.width;
+      trimbarsDrawer.rightTrimBar.x = (endSec / decodedSound.duration) * canvas.width;
+      playButton.disabled = false;
+
+      const ctxCanvas = canvas.getContext("2d");
+      ctxCanvas.clearRect(0, 0, canvas.width, canvas.height);
+      waveformDrawer.init(decodedSound, canvas, "#83E83E");
+      waveformDrawer.drawWave(0, canvas.height);
+
+      if (autoplay) {
+        const start = pixelToSeconds(trimbarsDrawer.leftTrimBar.x, decodedSound.duration, canvas.width);
+        const end   = pixelToSeconds(trimbarsDrawer.rightTrimBar.x, decodedSound.duration, canvas.width);
+        
+        // Application du pitch rate lors du playback
+        const pitch = padPitchRates[i] || 1;
+        sampler.playSegment(i, start, end, pitch);
+        startPlayhead(start, end);
+        
+        // Enregistrement de sequence si actif
+        if (isRecordingSequence) {
+          const timestamp = Date.now() - sequenceStartTime;
+          recordedSequence.push({ time: timestamp, padIndex: i });
+        }
+      }
+    }
+
+    // Support MIDI : permet de jouer les pads avec un controleur MIDI hardware
+    // Utilise Web MIDI API pour detecter les messages MIDI entrants
+    async function initMIDI() {
+      // Verification du support Web MIDI API dans le navigateur
+      if (!navigator.requestMIDIAccess) {
+        console.warn("Web MIDI API non supportee dans ce navigateur");
+        return;
+      }
+
+      try {
+        // Demande d'acces MIDI (peut demander permission utilisateur)
+        const midiAccess = await navigator.requestMIDIAccess();
+        console.log("MIDI access OK");
+
+        // Parcours de tous les peripheriques MIDI d'entree
+        for (const input of midiAccess.inputs.values()) {
+          console.log(`MIDI Input: ${input.name}`);
+          
+          // Ecoute des messages MIDI
+          input.onmidimessage = (event) => {
+            const [status, note, velocity] = event.data;
+            
+            // 0x90 = Note On, 0x80 = Note Off
+            if (status === 0x90 && velocity > 0) {
+              // Mapping des notes MIDI sur les pads
+              // Notes 36-51 (C1-D#2) correspondent aux pads 0-15
+              const padIndex = note - 36;
+              
+              if (padIndex >= 0 && padIndex < 16 && sampler.buffers[padIndex]) {
+                // Selection visuelle du pad
+                samplerGUI.selectPad?.(padIndex);
+                handlePadSelected(padIndex, true);
+                samplerGUI.playPadAnimation?.(padIndex);
+                
+                console.log(`MIDI Note ${note} -> Pad ${padIndex}`);
+              }
+            }
+          };
+        }
+      } catch (err) {
+        console.error("Erreur MIDI:", err);
+      }
+    }
+
+    function attachKeyboardOnce() {
+      window.addEventListener("keydown", (e) => {
+        if (e.repeat) return;
+        if (!sampler || !samplerGUI) return;
+        const k = e.key.toLowerCase();
+        const i = keyToPad[k];
+        if (i === undefined) return;
+        if (!sampler.buffers[i]) return;
+        
+        // Enregistrement de sequence si actif
+        if (isRecordingSequence) {
+          const timestamp = Date.now() - sequenceStartTime;
+          recordedSequence.push({ time: timestamp, padIndex: i });
+        }
+        
+        samplerGUI.selectPad?.(i);
+        handlePadSelected(i, true);
+        samplerGUI.playPadAnimation?.(i);
+      });
+    }
+
+    // Construction du menu de presets avec categories (optgroups)
+    // Conforme au cahier des charges : groupement par type
+    function fillMainPresetSelect(presets) {
+      presetSelect.innerHTML = `<option value="" selected disabled>Select an option</option>`;
+      
+      // Groupement des presets par categorie/type
+      const categories = {};
+      presets.forEach((preset, index) => {
+        const category = preset.type || "Uncategorized";
+        if (!categories[category]) {
+          categories[category] = [];
+        }
+        categories[category].push({ preset, index });
+      });
+
+      // Creation d'un optgroup pour chaque categorie
+      // Exemple du cours Seance5/ClientWithDynamicDropDownMenu
+      for (const [category, items] of Object.entries(categories)) {
+        const optgroup = document.createElement("optgroup");
+        optgroup.label = category;
+
+        items.forEach(({ preset, index }) => {
+          const option = document.createElement("option");
+          option.value = index;
+          option.textContent = preset.name;
+          optgroup.appendChild(option);
+        });
+
+        presetSelect.appendChild(optgroup);
+      }
+    }
+
+    function fillModalTypeAndPresetSelect(presets) {
+      const types = [...new Set(presets.map(p => p.type || "Unknown"))].sort();
+
+      existingTypeSelect.innerHTML = "";
+      types.forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        existingTypeSelect.appendChild(opt);
+      });
+
+      function fillPresetsByType(type) {
+        const filtered = presets.filter(p => (p.type || "Unknown") === type);
+        existingPresetSelect.innerHTML = "";
+        filtered.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p._id;
+          opt.textContent = p.name;
+          existingPresetSelect.appendChild(opt);
+        });
+      }
+
+      fillPresetsByType(types[0] || "Unknown");
+      existingTypeSelect.onchange = () => fillPresetsByType(existingTypeSelect.value);
+    }
+
+    // ================== INIT ==================
+    window.onload = async function init() {
+      ctx = new AudioContext();
+      recorder = new Recorder(ctx);
+
+      waveformDrawer = new WaveformDrawer();
+      trimbarsDrawer = new TrimbarsDrawer(canvasOverlay, 100, 200);
+
+      // fetch presets
+      try {
+        const response = await fetch(`${baseURL}/api/presets`);
+        presetsCache = await response.json();
+      } catch (err) {
+        console.error(err);
+        globalStatus.textContent = "Erreur: impossible de charger les presets.";
+        return;
+      }
+
+      fillMainPresetSelect(presetsCache);
+      fillModalTypeAndPresetSelect(presetsCache);
+
+      // engine
+      sampler = new SamplerEngine(ctx, {
+        onStatus: (i, s) => samplerGUI?.updateStatus(i, s),
+        onProgress: (i, r, t) => samplerGUI?.updateProgress(i, r, t),
+        onPlay: (i) => samplerGUI?.playPadAnimation(i),
+      });
+
+      // ===== Controls =====
+      const vol = document.querySelector("#vol");
+      const stopAllBtn = document.querySelector("#stopAllBtn");
+      
+      // Controls pour effets audio par pad (volume et pan individuels)
+      padVolumeInput = document.querySelector("#padVolume");
+      padPanInput = document.querySelector("#padPan");
+      padVolumeValue = document.querySelector("#padVolumeValue");
+      padPanValue = document.querySelector("#padPanValue");
+      currentPadLabel = document.querySelector("#currentPadLabel");
+      padPitchInput = document.querySelector("#padPitch");
+      padPitchValue = document.querySelector("#padPitchValue");
+      padReverseBtn = document.querySelector("#padReverse");
+
+      vol.oninput = (e) => {
+        sampler.masterGain.gain.value = parseFloat(e.target.value);
+      };
+
+      stopAllBtn.onclick = () => {
+        sampler.stopAll();
+        playheadX = null;
+      };
+      
+      // Gestion du volume par pad
+      // Permet de mixer chaque pad independamment (ex: kick plus fort que hi-hat)
+      padVolumeInput.oninput = (e) => {
+        if (currentPadIndex === null) return;
+        const volume = parseFloat(e.target.value);
+        sampler.setPadVolume(currentPadIndex, volume);
+        padVolumeValue.textContent = Math.round(volume * 100) + "%";
+      };
+      
+      // Gestion du panoramique par pad
+      // -1 = gauche complete, 0 = centre, +1 = droite complete
+      padPanInput.oninput = (e) => {
+        if (currentPadIndex === null) return;
+        const pan = parseFloat(e.target.value);
+        sampler.setPadPan(currentPadIndex, pan);
+        
+        if (pan < -0.33) {
+          padPanValue.textContent = "Gauche";
+        } else if (pan > 0.33) {
+          padPanValue.textContent = "Droite";
+        } else {
+          padPanValue.textContent = "Centre";
+        }
+      };
+      
+      // Gestion du pitch shift par pad (0.5x a 2x)
+      // playbackRate modifie la vitesse ET la hauteur simultanement
+      padPitchInput.oninput = (e) => {
+        if (currentPadIndex === null) return;
+        const pitch = parseFloat(e.target.value);
+        padPitchRates[currentPadIndex] = pitch;
+        padPitchValue.textContent = pitch.toFixed(1) + "x";
+      };
+      
+      // Reverse le buffer audio du pad selectionne
+      padReverseBtn.onclick = () => {
+        if (currentPadIndex === null) return;
+        padReversed[currentPadIndex] = !padReversed[currentPadIndex];
+        if (padReversed[currentPadIndex]) {
+          sampler.reversePadBuffer(currentPadIndex);
+          padReverseBtn.textContent = "✓ Reverse";
+        } else {
+          sampler.restoreOriginalBuffer(currentPadIndex);
+          padReverseBtn.textContent = "Reverse";
+        }
+      };
+
+      samplerGUI = new SamplerGUI(sampler, buttonsContainer);
+      refreshPadKeyCorners();
+      samplerGUI.onPadSelected = (i, autoplay=false) => handlePadSelected(i, autoplay);
+
+      padTrims = new Array(16).fill(null).map(() => ({ startSec: 0, endSec: null }));
+      attachKeyboardOnce();
+      
+      // POINT 12b : Gestion des sequences
+      const recordSequenceBtn = document.getElementById('recordSequence');
+      const playSequenceBtn = document.getElementById('playSequence');
+      const clearSequenceBtn = document.getElementById('clearSequence');
+      const sequenceStatus = document.getElementById('sequenceStatus');
+      
+      recordSequenceBtn.onclick = () => {
+        if (!isRecordingSequence) {
+          // Demarrage de l'enregistrement
+          isRecordingSequence = true;
+          recordedSequence = [];
+          sequenceStartTime = Date.now();
+          recordSequenceBtn.textContent = "Stop Rec";
+          recordSequenceBtn.classList.add('recording');
+          sequenceStatus.textContent = "Enregistrement en cours...";
+        } else {
+          // Arret de l'enregistrement
+          isRecordingSequence = false;
+          recordSequenceBtn.textContent = "Rec Sequence";
+          recordSequenceBtn.classList.remove('recording');
+          
+          if (recordedSequence.length > 0) {
+            sequenceStatus.textContent = `Sequence capturee: ${recordedSequence.length} evenements`;
+            playSequenceBtn.disabled = false;
+            saveSequenceBtn.disabled = false;
+            clearSequenceBtn.disabled = false;
+          } else {
+            sequenceStatus.textContent = "Aucun evenement enregistre";
+          }
+        }
+      };
+      
+      async function playSequenceFromTime(startTimeOffset = 0) {
+        if (recordedSequence.length === 0) return;
+        
+        isPlayingSequence = true;
+        isPausedSequence = false;
+        sequencePlaybackStart = Date.now() - startTimeOffset;
+        playSequenceBtn.textContent = "Stop";
+        pauseSequenceBtn.disabled = false;
+        sequenceStatus.textContent = "Lecture en cours...";
+        
+        for (const event of recordedSequence) {
+          if (!isPlayingSequence) break;
+          
+          const targetTime = sequencePlaybackStart + event.time;
+          const now = Date.now();
+          const waitTime = targetTime - now;
+          
+          if (waitTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+          
+          if (!isPlayingSequence || isPausedSequence) break;
+          
+          const padIndex = event.padIndex;
+          const t = padTrims[padIndex];
+          if (!t || !sampler.buffers[padIndex]) continue;
+          
+          const buffer = sampler.buffers[padIndex];
+          const start = t.startSec || 0;
+          const end = t.endSec === null ? buffer.duration : t.endSec;
+          const pitch = padPitchRates[padIndex];
+          
+          sampler.playSegment(padIndex, start, end, pitch);
+          samplerGUI.playPadAnimation?.(padIndex);
+        }
+        
+        if (isPlayingSequence && !isPausedSequence) {
+          isPlayingSequence = false;
+          playSequenceBtn.textContent = "Play Sequence";
+          playSequenceBtn.disabled = false;
+          pauseSequenceBtn.disabled = true;
+          sequenceStatus.textContent = `Sequence capturee: ${recordedSequence.length} evenements`;
+        }
+      }
+      
+      playSequenceBtn.onclick = () => {
+        if (recordedSequence.length === 0) return;
+        
+        if (isPlayingSequence) {
+          // Stop
+          isPlayingSequence = false;
+          isPausedSequence = false;
+          playSequenceBtn.textContent = "Play Sequence";
+          pauseSequenceBtn.disabled = true;
+          sequenceStatus.textContent = `Sequence capturee: ${recordedSequence.length} evenements`;
+        } else {
+          // Play
+          playSequenceFromTime(0);
+        }
+      };
+      
+      const pauseSequenceBtn = document.getElementById('pauseSequence');
+      pauseSequenceBtn.onclick = () => {
+        if (!isPlayingSequence) return;
+        
+        if (isPausedSequence) {
+          // Resume
+          const pauseDuration = Date.now() - sequencePauseTime;
+          sequencePlaybackStart += pauseDuration;
+          isPausedSequence = false;
+          pauseSequenceBtn.textContent = "Pause";
+          sequenceStatus.textContent = "Lecture en cours...";
+          playSequenceFromTime(Date.now() - sequencePlaybackStart);
+        } else {
+          // Pause
+          isPausedSequence = true;
+          sequencePauseTime = Date.now();
+          pauseSequenceBtn.textContent = "Resume";
+          sequenceStatus.textContent = "En pause";
+        }
+      };
+      
+      clearSequenceBtn.onclick = () => {
+        if (!confirm('Effacer la sequence en cours ?')) return;
+        recordedSequence = [];
+        playSequenceBtn.disabled = true;
+        pauseSequenceBtn.disabled = true;
+        saveSequenceBtn.disabled = true;
+        clearSequenceBtn.disabled = true;
+        sequenceStatus.textContent = "-";
+      };
+      
+      const saveSequenceBtn = document.getElementById('saveSequence');
+      saveSequenceBtn.onclick = () => {
+        if (recordedSequence.length === 0) return;
+        
+        const name = prompt('Nom de la sequence:', `Sequence ${savedSequences.length + 1}`);
+        if (!name) return;
+        
+        savedSequences.push({
+          id: Date.now(),
+          name: name,
+          events: recordedSequence,
+          date: new Date().toISOString()
+        });
+        
+        localStorage.setItem('savedSequences', JSON.stringify(savedSequences));
+        updateSequenceLibraryCount();
+        alert('Sequence sauvegardee !');
+      };
+      
+      function updateSequenceLibraryCount() {
+        const btn = document.getElementById('showSequenceList');
+        btn.textContent = `Library (${savedSequences.length})`;
+      }
+      
+      function renderSequenceList() {
+        const container = document.getElementById('sequenceList');
+        if (savedSequences.length === 0) {
+          container.innerHTML = '<p style="text-align: center; color: #94a3b8;">Aucune sequence sauvegardee</p>';
+          return;
+        }
+        
+        container.innerHTML = savedSequences.map((seq, index) => `
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 12px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${seq.name}</strong>
+              <div style="color: #94a3b8; font-size: 0.9em;">
+                ${seq.events.length} evenements • ${new Date(seq.date).toLocaleDateString()}
+              </div>
+            </div>
+            <div>
+              <button onclick="loadSavedSequence(${index})" class="btn" style="margin-right: 5px;">Charger</button>
+              <button onclick="deleteSavedSequence(${index})" class="btn stopBtn">Supprimer</button>
+            </div>
+          </div>
+        `).join('');
+      }
+      
+      window.loadSavedSequence = (index) => {
+        recordedSequence = [...savedSequences[index].events];
+        playSequenceBtn.disabled = false;
+        saveSequenceBtn.disabled = false;
+        clearSequenceBtn.disabled = false;
+        sequenceStatus.textContent = `Sequence chargee: ${recordedSequence.length} evenements`;
+        document.getElementById('sequenceListModal').classList.add('hidden');
+      };
+      
+      window.deleteSavedSequence = (index) => {
+        if (!confirm('Supprimer cette sequence ?')) return;
+        savedSequences.splice(index, 1);
+        localStorage.setItem('savedSequences', JSON.stringify(savedSequences));
+        updateSequenceLibraryCount();
+        renderSequenceList();
+      };
+      
+      document.getElementById('showSequenceList').onclick = () => {
+        renderSequenceList();
+        document.getElementById('sequenceListModal').classList.remove('hidden');
+      };
+      
+      document.getElementById('closeSequenceList').onclick = () => {
+        document.getElementById('sequenceListModal').classList.add('hidden');
+      };
+      
+      updateSequenceLibraryCount();
+      
+      // Initialisation du support MIDI (optionnel mais souhaite)
+      initMIDI();
+
+      document.querySelector("#vol").oninput = (e) => sampler.masterGain.gain.value = parseFloat(e.target.value);
+      document.querySelector("#stopAllBtn").onclick = () => { sampler.stopAll(); playheadX = null; };
+
+      loadAllBtn.onclick = async () => {
+        loadAllBtn.disabled = true;
+        globalStatus.textContent = "Chargement…";
+        await sampler.loadAllParallel();
+        globalStatus.textContent = "Tous prêts !";
+        setTimeout(() => globalStatus.textContent="", 1500);
+        loadAllBtn.disabled = false;
+      };
+
+      presetSelect.onchange = (e) => {
+        const presetIndex = parseInt(e.target.value, 10);
+        const preset = presetsCache[presetIndex];
+        if (!preset) return;
+
+        const urls = preset.samples.map(s => `${baseURL}/presets/${String(s.url).replace(/^\/+/, "")}`);
+        const names = preset.samples.map(s => s.name);
+
+        sampler.updateSamples(urls, names);
+        padTrims = new Array(16).fill(null).map(() => ({ startSec: 0, endSec: null }));
+        currentPadIndex = null;
+
+        samplerGUI.createButtons();
+        refreshPadKeyCorners();
+      };
+
+      playButton.onclick = () => {
+        if (!decodedSound) return;
+        if (currentPadIndex === null) return; 
+        const start = pixelToSeconds(trimbarsDrawer.leftTrimBar.x, decodedSound.duration, canvas.width);
+        const end = pixelToSeconds(trimbarsDrawer.rightTrimBar.x, decodedSound.duration, canvas.width);
+        const pitch = padPitchRates[currentPadIndex];
+        sampler.playSegment(currentPadIndex, start, end, pitch); 
+        startPlayhead(start, end);
+      };
+
+      // trim mouse
+      canvasOverlay.onmousemove = (evt) => {
+        const rect = canvas.getBoundingClientRect();
+        trimbarsDrawer.moveTrimBars({ x: evt.clientX - rect.left, y: evt.clientY - rect.top });
+        if (decodedSound && currentPadIndex !== null) {
+          const start = pixelToSeconds(trimbarsDrawer.leftTrimBar.x, decodedSound.duration, canvas.width);
+          const end   = pixelToSeconds(trimbarsDrawer.rightTrimBar.x, decodedSound.duration, canvas.width);
+          padTrims[currentPadIndex] = { startSec: start, endSec: end };
+        }
+      };
+      canvasOverlay.onmousedown = () => trimbarsDrawer.startDrag();
+      canvasOverlay.onmouseup = () => trimbarsDrawer.stopDrag();
+      requestAnimationFrame(animate);
+
+      // modal events
+      openRecordModalBtn.onclick = openModal;
+      closeRecordModalBtn.onclick = closeModal;
+      recordMode.onchange = switchModalMode;
+
+      // record
+      recStartBtn.onclick = async () => {
+        try {
+          if (ctx.state !== "running") await ctx.resume();
+          recStartBtn.disabled = true;
+          recStopBtn.disabled = false;
+          recordModalStatus.textContent = "Enregistrement…";
+          await recorder.start();
+        } catch (e) {
+          console.error(e);
+          recordModalStatus.textContent = "Micro refusé ou erreur.";
+          recStartBtn.disabled = false;
+          recStopBtn.disabled = true;
+        }
+      };
+
+      recStopBtn.onclick = async () => {
+        try {
+          const res = await recorder.stop();
+          recStartBtn.disabled = false;
+          recStopBtn.disabled = true;
+
+          if (!res) {
+            recordModalStatus.textContent = "Enregistrement vide.";
+            return;
+          }
+
+          lastRecording = res;
+          saveRecordingBtn.disabled = false;
+          recordModalStatus.textContent = "OK - Pret a sauvegarder.";
+
+          // preview pad
+          const pad = (recordMode.value === "existing")
+            ? parseInt(existingPadIndex.value, 10)
+            : parseInt(newPadIndex.value, 10);
+
+          if (!Number.isNaN(pad) && pad >= 0 && pad < 16) {
+            sampler.buffers[pad] = res.audioBuffer;
+            samplerGUI.createButtons();
+            refreshPadKeyCorners();
+            samplerGUI.selectPad?.(pad);
+            handlePadSelected(pad, false);
+          }
+        } catch (e) {
+          console.error(e);
+          recordModalStatus.textContent = "Erreur stop/decode.";
+        }
+      };
+
+      // save (API)
+      saveRecordingBtn.onclick = async () => {
+        if (!lastRecording) return;
+
+        try {
+          saveRecordingBtn.disabled = true;
+          recordModalStatus.textContent = "Upload…";
+
+          const fd = new FormData();
+          fd.append("audio", lastRecording.blob);
+
+          if (recordMode.value === "existing") {
+            const presetId = existingPresetSelect.value;
+            const sname = (existingSampleName.value || "Mic").trim();
+            fd.append("sampleName", sname);
+
+            const r = await fetch(`${baseURL}/api/presets/${presetId}/samples`, {
+              method: "POST",
+              body: fd
+            });
+            if (!r.ok) throw new Error("upload failed");
+            recordModalStatus.textContent = "Ajoute au preset avec succes";
+          } else {
+            const ptype = (newPresetType.value || "").trim();
+            const pname = (newPresetName.value || "").trim();
+            const cat = (newPresetCategory.value || "Other").trim();
+            const sname = (newSampleName.value || "Mic").trim();
+
+            if (!ptype || !pname) {
+              recordModalStatus.textContent = "Type + Nom preset requis.";
+              saveRecordingBtn.disabled = false;
+              return;
+            }
+
+            fd.append("type", ptype);
+            fd.append("name", pname);
+            fd.append("category", cat);
+            fd.append("sampleName", sname);
+
+            const r = await fetch(`${baseURL}/api/presets/create-with-sample`, {
+              method: "POST",
+              body: fd
+            });
+            if (!r.ok) throw new Error("create failed");
+            recordModalStatus.textContent = "Preset cree avec succes";
+          }
+
+          // refresh preset lists
+          const resp = await fetch(`${baseURL}/api/presets`);
+          if (resp.ok) {
+            presetsCache = await resp.json();
+            fillMainPresetSelect(presetsCache);
+            fillModalTypeAndPresetSelect(presetsCache);
+          }
+        } catch (e) {
+          console.error(e);
+          recordModalStatus.textContent = "Erreur upload.";
+          saveRecordingBtn.disabled = false;
+        }
+      };
+      
+      // POINT 9 : Freesound.org integration
+      openFreesoundBtn.onclick = () => {
+        freesoundModal.classList.remove('hidden');
+      };
+      
+      closeFreesoundBtn.onclick = () => {
+        freesoundModal.classList.add('hidden');
+      };
+      
+      let currentFreesoundAudio = null;
+      
+      freesoundSearchBtn.onclick = async () => {
+        const apiKey = freesoundApiKey.value.trim();
+        const query = freesoundQuery.value.trim();
+        
+        if (!apiKey) {
+          freesoundResults.innerHTML = '<p style="color: #ef4444;">API key requise</p>';
+          return;
+        }
+        
+        if (!query) {
+          freesoundResults.innerHTML = '<p style="color: #ef4444;">Entrez un terme de recherche</p>';
+          return;
+        }
+        
+        try {
+          freesoundResults.innerHTML = '<p>Recherche en cours...</p>';
+          
+          // Recherche sur Freesound API v2
+          const searchUrl = `https://freesound.org/apiv2/search/text/?query=${encodeURIComponent(query)}&token=${apiKey}&fields=id,name,previews,username`;
+          const response = await fetch(searchUrl);
+          
+          if (!response.ok) {
+            throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          
+          if (!data.results || data.results.length === 0) {
+            freesoundResults.innerHTML = '<p>Aucun resultat</p>';
+            return;
+          }
+          
+          // Affichage des resultats
+          let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+          
+          data.results.slice(0, 10).forEach(sound => {
+            html += `
+              <div style="padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; color: #60a5fa;">${sound.name}</div>
+                  <div style="font-size: 12px; color: #94a3b8;">par ${sound.username}</div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button class="btn freesound-preview" data-url="${sound.previews['preview-lq-mp3']}" style="padding: 6px 12px;">▶ Preview</button>
+                  <button class="btn freesound-download" data-id="${sound.id}" data-name="${sound.name}" data-apikey="${apiKey}" style="padding: 6px 12px;">Download</button>
+                </div>
+              </div>
+            `;
+          });
+          
+          html += '</div>';
+          freesoundResults.innerHTML = html;
+          
+          // Gestion des boutons preview
+          document.querySelectorAll('.freesound-preview').forEach(btn => {
+            btn.onclick = () => {
+              if (currentFreesoundAudio) {
+                currentFreesoundAudio.pause();
+                currentFreesoundAudio = null;
+              }
+              
+              const url = btn.dataset.url;
+              currentFreesoundAudio = new Audio(url);
+              currentFreesoundAudio.play();
+            };
+          });
+          
+          // Gestion des boutons download
+          document.querySelectorAll('.freesound-download').forEach(btn => {
+            btn.onclick = async () => {
+              if (currentPadIndex === null) {
+                alert('Selectionnez un pad avant de telecharger');
+                return;
+              }
+              
+              const soundId = btn.dataset.id;
+              const soundName = btn.dataset.name;
+              const apiKey = btn.dataset.apikey;
+              
+              btn.disabled = true;
+              btn.textContent = 'Download...';
+              
+              try {
+                // Recuperation des informations du son
+                const infoUrl = `https://freesound.org/apiv2/sounds/${soundId}/?token=${apiKey}`;
+                const infoResp = await fetch(infoUrl);
+                const soundInfo = await infoResp.json();
+                
+                // Download du fichier audio de preview (plus rapide que le fichier original)
+                const audioUrl = soundInfo.previews['preview-hq-mp3'];
+                const audioResp = await fetch(audioUrl);
+                const arrayBuffer = await audioResp.arrayBuffer();
+                const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                
+                // Assignation au pad courant
+                sampler.buffers[currentPadIndex] = audioBuffer;
+                sampler.names[currentPadIndex] = soundName;
+                
+                // Mise a jour de l'interface
+                handlePadSelected(currentPadIndex, false);
+                
+                btn.textContent = '✓ OK';
+                setTimeout(() => {
+                  freesoundModal.classList.add('hidden');
+                  btn.disabled = false;
+                  btn.textContent = 'Download';
+                }, 1000);
+                
+              } catch (err) {
+                console.error(err);
+                btn.textContent = 'Erreur';
+                btn.disabled = false;
+              }
+            };
+          });
+          
+        } catch (err) {
+          console.error(err);
+          freesoundResults.innerHTML = `<p style="color: #ef4444;">Erreur: ${err.message}</p>`;
+        }
+      };
+    };
+  </script>
+</body>
+</html>
