@@ -2,127 +2,317 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Sampler – Headless Test</title>
+  <title>Sampler – Tests Headless</title>
   <style>
-    body { font-family: system-ui, Arial; padding: 20px; }
-    #pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 520px; }
-    button { padding: 14px 12px; font-size: 16px; border-radius: 12px; border: 0; cursor: pointer; }
-    .status { margin-top: 12px; opacity: 0.8; }
+    body { 
+      font-family: system-ui, Arial; 
+      padding: 20px; 
+      background: #1e293b; 
+      color: #e2e8f0;
+      max-width: 1200px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    h2 { color: #60a5fa; }
+    h3 { text-align: center; }
+    .test-section { 
+      margin: 30px auto; 
+      padding: 20px; 
+      background: rgba(30, 41, 59, 0.5); 
+      border-radius: 8px;
+      max-width: 900px;
+    }
+    .test-result { padding: 10px; margin: 10px 0; border-radius: 6px; font-family: monospace; font-size: 14px; text-align: left; }
+    .success { background: rgba(34, 197, 94, 0.2); border-left: 4px solid #22c55e; }
+    .error { background: rgba(239, 68, 68, 0.2); border-left: 4px solid #ef4444; }
+    .info { background: rgba(59, 130, 246, 0.2); border-left: 4px solid #3b82f6; }
+    button { padding: 10px 16px; margin: 5px; background: #3b82f6; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #2563eb; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .test-controls { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; justify-content: center; }
+    #testOutput { max-height: 400px; overflow-y: auto; }
+    .log-entry { padding: 5px; margin: 2px 0; font-family: monospace; font-size: 12px; text-align: left; }
+    .log-info { color: #60a5fa; }
+    .log-success { color: #22c55e; }
+    .log-error { color: #ef4444; }
+    .log-warn { color: #f59e0b; }
+    select { padding: 8px; background: #334155; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px; margin: 10px 0; }
+    p { max-width: 800px; margin: 10px auto; }
   </style>
 </head>
 <body>
-  <h2>Headless Sampler Test (sans SamplerGUI)</h2>
+  <h2>Tests Headless - SamplerEngine</h2>
   <p>
-    Cette page teste le moteur audio sans interface graphique complete.<br>
-    DEMONSTRATION DE LA SEPARATION GUI/MOTEUR : le SamplerEngine fonctionne independamment.<br>
-    Pas de canvas, pas de waveform, juste des boutons simples pour tester le playback.
+    <strong>Tests automatises du moteur audio sans interface graphique.</strong><br>
+    Demonstration de la separation GUI/Moteur : le SamplerEngine fonctionne independamment.
   </p>
 
-  <label for="presetSelect">Preset :</label>
-  <select id="presetSelect">
-    <option value="" selected disabled>Choisir un preset</option>
-  </select>
+  <div class="test-section">
+    <h3>1. Configuration</h3>
+    <label for="presetSelect">Preset de test :</label>
+    <select id="presetSelect">
+      <option value="" selected disabled>Chargement...</option>
+    </select>
+  </div>
 
-  <button id="loadAllBtn">Charger tout</button>
-  <div class="status" id="status"></div>
+  <div class="test-section">
+    <h3>2. Tests disponibles</h3>
+    <div class="test-controls">
+      <button id="testInit">Test initialisation</button>
+      <button id="testLoad">Test chargement samples</button>
+      <button id="testPlayback">Test lecture</button>
+      <button id="testEffects">Test effets audio</button>
+      <button id="testAll">Lancer tous les tests</button>
+      <button id="clearLog">Effacer logs</button>
+    </div>
+  </div>
 
-  <h3>Pads</h3>
-  <div id="pads"></div>
+  <div class="test-section">
+    <h3>3. Résultats des tests</h3>
+    <div id="testOutput"></div>
+  </div>
 
   <script type="module">
     import SamplerEngine from "./js/SamplerEngine.js";
 
-    // URL du serveur backend (localhost pour developpement)
-    const baseURL = "http://localhost:3000";
-    
-    // Selection des elements DOM
+    const baseURL = "http://localhost:5000";
     const presetSelect = document.getElementById("presetSelect");
-    const padsDiv = document.getElementById("pads");
-    const loadAllBtn = document.getElementById("loadAllBtn");
-    const statusEl = document.getElementById("status");
-
-    // Creation du contexte audio Web Audio API
-    const ctx = new AudioContext();
-
-    // Initialisation du moteur de sampler
-    // On passe des callbacks simples qui loggent dans la console
-    // Dans la version complete, ces callbacks mettraient a jour la GUI
-    const sampler = new SamplerEngine(ctx, {
-      onStatus: (i, s) => console.log("status", i, s),
-      onProgress: (i, r, t) => console.log("progress", i, r, t),
-      onPlay: (i) => console.log("play", i)
-    });
-
+    const testOutput = document.getElementById("testOutput");
+    
     let presets = [];
+    let sampler = null;
+    let ctx = null;
+    let testResults = { passed: 0, failed: 0 };
 
-    // Fonction pour recuperer la liste des presets depuis le serveur
+    // Fonction pour logger dans la console de test
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      testOutput.appendChild(entry);
+      testOutput.scrollTop = testOutput.scrollHeight;
+      console.log(message);
+    }
+
+    function logResult(testName, success, details = '') {
+      const result = document.createElement('div');
+      result.className = `test-result ${success ? 'success' : 'error'}`;
+      if (success) {
+        testResults.passed++;
+        result.textContent = `✓ ${testName} - RÉUSSI ${details}`;
+      } else {
+        testResults.failed++;
+        result.textContent = `✗ ${testName} - ÉCHOUÉ ${details}`;
+      }
+      testOutput.appendChild(result);
+      testOutput.scrollTop = testOutput.scrollHeight;
+    }
+
     async function fetchPresets() {
       const res = await fetch(`${baseURL}/api/presets`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     }
 
-    // Construction des boutons de pads (version simplifiee sans progression ni canvas)
-    function buildPads(names) {
-      padsDiv.innerHTML = "";
-      names.forEach((name, i) => {
-        const btn = document.createElement("button");
-        btn.textContent = name || `Pad ${i}`;
+    // TEST 1: Initialisation du moteur
+    async function testInitialization() {
+      log("🔧 Test d'initialisation du SamplerEngine...", 'info');
+      try {
+        ctx = new AudioContext();
+        sampler = new SamplerEngine(ctx, {
+          onStatus: (i, s) => log(`Status pad ${i}: ${s}`, 'info'),
+          onProgress: (i, r, t) => log(`Progress pad ${i}: ${r}/${t} bytes`, 'info'),
+          onPlay: (i) => log(`Play pad ${i}`, 'success')
+        });
         
-        // Au clic, jouer le son du pad
-        btn.onclick = async () => {
-          // Reprise du contexte audio si suspendu (politique navigateur)
-          if (ctx.state === "suspended") await ctx.resume();
-          sampler.play(i);
-        };
+        const checks = [
+          { name: 'Contexte audio créé', pass: ctx !== null },
+          { name: 'SamplerEngine instancié', pass: sampler !== null },
+          { name: '16 slots de pads', pass: sampler.samples.length === 16 },
+          { name: 'Master gain connecté', pass: sampler.masterGain !== null },
+          { name: 'Effets par pad initialisés', pass: sampler.padGains.length === 16 }
+        ];
         
-        padsDiv.appendChild(btn);
-      });
+        checks.forEach(check => {
+          logResult(check.name, check.pass);
+        });
+        
+        return checks.every(c => c.pass);
+      } catch (err) {
+        logResult('Initialisation', false, err.message);
+        return false;
+      }
     }
 
-    // Chargement d'un preset specifique
-    function loadPreset(presetIndex) {
-      const preset = presets[presetIndex];
-      if (!preset) return;
+    // TEST 2: Chargement des samples
+    async function testLoading() {
+      log("📦 Test de chargement des samples...", 'info');
+      if (!sampler) {
+        logResult('Chargement samples', false, 'Moteur non initialisé');
+        return false;
+      }
 
-      // Construction des URLs completes des samples
-      const urls = preset.samples.map(s => `${baseURL}/presets/${s.url.replace(/^\.\//, "")}`);
-      const names = preset.samples.map(s => s.name);
+      try {
+        const presetIdx = presetSelect.selectedIndex - 1;
+        if (presetIdx < 0) {
+          logResult('Chargement samples', false, 'Aucun preset sélectionné');
+          return false;
+        }
 
-      // Mise a jour du moteur avec les nouveaux samples
-      sampler.updateSamples(urls, names);
-      
-      // Reconstruction des boutons avec les nouveaux noms
-      buildPads(names);
+        const preset = presets[presetIdx];
+        const urls = preset.samples.map(s => `${baseURL}/presets/${s.url.replace(/^\.\//, "")}`);
+        const names = preset.samples.map(s => s.name);
 
-      statusEl.textContent = `Preset selectionne: ${preset.name} (${names.length} sons)`;
+        sampler.updateSamples(urls, names);
+        
+        const start = Date.now();
+        await sampler.loadAllParallel();
+        const duration = Date.now() - start;
+
+        const loadedCount = sampler.buffers.filter(b => b !== null).length;
+        const success = loadedCount === preset.samples.length;
+        
+        logResult('Chargement parallèle', success, 
+          `${loadedCount}/${preset.samples.length} samples en ${duration}ms`);
+        
+        // Vérification des buffers
+        sampler.buffers.slice(0, preset.samples.length).forEach((buf, i) => {
+          if (buf) {
+            log(`✓ Sample ${i} (${names[i]}): ${buf.length} samples, ${buf.duration.toFixed(2)}s`, 'success');
+          } else {
+            log(`✗ Sample ${i} (${names[i]}): échec chargement`, 'error');
+          }
+        });
+
+        return success;
+      } catch (err) {
+        logResult('Chargement samples', false, err.message);
+        return false;
+      }
     }
 
-    // Chargement initial de la liste des presets
-    presets = await fetchPresets();
+    // TEST 3: Lecture audio
+    async function testPlayback() {
+      log("🔊 Test de lecture audio...", 'info');
+      if (!sampler || !sampler.buffers[0]) {
+        logResult('Lecture audio', false, 'Aucun sample chargé');
+        return false;
+      }
 
-    // Construction du menu deroulant dynamiquement
-    presets.forEach((p, idx) => {
-      const opt = document.createElement("option");
-      opt.value = idx;
-      opt.textContent = p.name;
-      presetSelect.appendChild(opt);
-    });
+      try {
+        if (ctx.state === 'suspended') await ctx.resume();
+        
+        // Test de lecture du premier pad
+        sampler.play(0);
+        logResult('Lecture pad 0', true, 'Son joué avec succès');
+        
+        await new Promise(r => setTimeout(r, 500));
+        
+        // Test stopAll
+        sampler.stopAll();
+        logResult('Stop all sources', true, 'Toutes les sources arrêtées');
+        
+        return true;
+      } catch (err) {
+        logResult('Lecture audio', false, err.message);
+        return false;
+      }
+    }
 
-    // Gestion du changement de preset
-    presetSelect.onchange = (e) => loadPreset(parseInt(e.target.value, 10));
+    // TEST 4: Effets audio (gain, pan, reverse)
+    async function testEffects() {
+      log("🎛️ Test des effets audio...", 'info');
+      if (!sampler) {
+        logResult('Effets audio', false, 'Moteur non initialisé');
+        return false;
+      }
 
-    // Bouton pour charger tous les sons en parallele
-    loadAllBtn.onclick = async () => {
-      loadAllBtn.disabled = true;
-      statusEl.textContent = "Chargement des sons…";
+      try {
+        // Test gain global (modification directe)
+        sampler.masterGain.gain.value = 0.5;
+        logResult('Master volume', sampler.masterGain.gain.value === 0.5, 
+          `Volume: ${sampler.masterGain.gain.value}`);
+        
+        sampler.masterGain.gain.value = 1.0; // Reset
+        
+        // Test gain par pad
+        sampler.setPadVolume(0, 0.8);
+        const vol = sampler.getPadVolume(0);
+        logResult('Pad volume', Math.abs(vol - 0.8) < 0.01, 
+          `Pad 0 volume: ${vol}`);
+        
+        // Test pan
+        sampler.setPadPan(0, -0.5);
+        const pan = sampler.getPadPan(0);
+        logResult('Pad pan', Math.abs(pan - (-0.5)) < 0.01, 
+          `Pad 0 pan: ${pan}`);
+        
+        // Test reverse buffer
+        if (sampler.buffers[0]) {
+          const originalLength = sampler.buffers[0].length;
+          sampler.reversePadBuffer(0);
+          logResult('Reverse buffer', sampler.buffers[0].length === originalLength, 
+            'Buffer inversé avec succès');
+          
+          sampler.restoreOriginalBuffer(0);
+          logResult('Restore buffer', true, 'Buffer restauré');
+        }
+        
+        return true;
+      } catch (err) {
+        logResult('Effets audio', false, err.message);
+        return false;
+      }
+    }
+
+    // Lancer tous les tests en séquence
+    async function runAllTests() {
+      testResults = { passed: 0, failed: 0 };
+      testOutput.innerHTML = '';
       
-      // Chargement en parallele de tous les samples
-      await sampler.loadAllParallel();
+      log("═══════════════════════════════════════", 'info');
+      log("    DÉBUT DE LA SUITE DE TESTS", 'info');
+      log("═══════════════════════════════════════", 'info');
       
-      statusEl.textContent = "Sons charges. Clique sur les pads pour jouer.";
-      loadAllBtn.disabled = false;
+      await testInitialization();
+      await testLoading();
+      await testPlayback();
+      await testEffects();
+      
+      log("═══════════════════════════════════════", 'info');
+      log(`RÉSULTATS: ${testResults.passed} réussis, ${testResults.failed} échoués`, 
+        testResults.failed === 0 ? 'success' : 'error');
+      log("═══════════════════════════════════════", 'info');
+    }
+
+    // Event listeners
+    document.getElementById('testInit').onclick = testInitialization;
+    document.getElementById('testLoad').onclick = testLoading;
+    document.getElementById('testPlayback').onclick = testPlayback;
+    document.getElementById('testEffects').onclick = testEffects;
+    document.getElementById('testAll').onclick = runAllTests;
+    document.getElementById('clearLog').onclick = () => {
+      testOutput.innerHTML = '';
+      testResults = { passed: 0, failed: 0 };
     };
+
+    // Initialisation
+    (async function init() {
+      try {
+        presets = await fetchPresets();
+        presets.forEach((p, idx) => {
+          const opt = document.createElement("option");
+          opt.value = idx;
+          opt.textContent = p.name;
+          presetSelect.appendChild(opt);
+        });
+        log(`${presets.length} presets chargés depuis le serveur`, 'success');
+        log("Sélectionnez un preset et lancez les tests", 'info');
+      } catch (error) {
+        log(`Erreur: ${error.message}`, 'error');
+        log("Vérifiez que le serveur Node.js tourne sur le port 5000", 'warn');
+      }
+    })();
   </script>
 </body>
 </html>

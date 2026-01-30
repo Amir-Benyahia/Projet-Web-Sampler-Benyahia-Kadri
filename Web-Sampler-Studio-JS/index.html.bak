@@ -15,10 +15,6 @@
     <h1>Sampler 4×4</h1>
     <p>Choisissez un preset, cliquez sur un pad, et ajustez le trim sur la forme d’onde.</p>
 
-
-    <div style="margin-bottom: 15px;">
-      <a href="headless.html" target="_blank" class="btn" style="display: inline-block; text-decoration: none; padding: 8px 16px;">Tests Headless</a>
-    </div>
     <label for="presetSelect">Select a preset:</label>
     <select id="presetSelect">
       <option value="" selected disabled>Select an option</option>

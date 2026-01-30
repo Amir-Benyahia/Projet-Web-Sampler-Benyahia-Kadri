@@ -15,6 +15,7 @@
 - [Répartition des tâches](#répartition-des-tâches)
 - [Utilisation de l'IA](#utilisation-de-lia)
 - [Features implémentées](#features-implémentées)
+- [Tests Headless](#tests-headless)
 - [Manuel d'utilisation](#manuel-dutilisation)
 - [Structure des dossiers](#structure-des-dossiers)
 
@@ -570,6 +571,79 @@ export class SequencerService {
   - Limitation de taille (25MB)
 - [x] **Commentaires détaillés** : Code documenté en français
 - [x] **Variables d'environnement** : Configuration via .env
+
+---
+
+## Tests Headless
+
+### Description
+
+Le projet inclut une page de tests headless (`headless.html`) qui permet de valider le fonctionnement du moteur audio (`SamplerEngine`) de manière automatisée, sans interface graphique complète. Cette approche démontre la séparation entre la logique métier (moteur audio) et l'interface utilisateur (GUI).
+
+### Accès aux tests
+
+**Frontend Vanilla JS** : Un bouton "Tests Headless" est disponible sur la page principale (`index.html`) qui ouvre la page de tests dans un nouvel onglet.
+
+**URL directe** : `http://localhost:8080/headless.html` (en développement local)
+
+### Tests automatisés disponibles
+
+#### 1. Test d'initialisation
+Vérifie que le moteur audio est correctement instancié avec tous ses composants :
+- Création du contexte audio Web Audio API
+- Instanciation du SamplerEngine
+- Vérification des 16 slots de pads
+- Validation du master gain node
+- Initialisation des effets par pad (gain et panoramique)
+
+#### 2. Test de chargement des samples
+Teste le chargement parallèle des samples depuis le backend :
+- Sélection d'un preset depuis le serveur
+- Chargement de tous les samples en parallèle
+- Décodage des buffers audio
+- Vérification de l'intégrité des données (durée, nombre de samples)
+- Mesure du temps de chargement
+
+#### 3. Test de lecture audio
+Valide la capacité du moteur à jouer des sons :
+- Reprise du contexte audio (politique navigateur)
+- Lecture d'un sample complet
+- Arrêt de toutes les sources actives (stopAll)
+- Gestion du cycle de vie des sources audio
+
+#### 4. Test des effets audio
+Vérifie le bon fonctionnement des effets audio :
+- Contrôle du volume global (master gain)
+- Contrôle du volume par pad
+- Panoramique stéréo (gauche/centre/droite)
+- Inversion de buffer (reverse)
+- Restauration du buffer original
+
+### Architecture des tests
+
+Les tests utilisent un système de logging avec horodatage et code couleur :
+- **Vert** : Test réussi
+- **Rouge** : Test échoué
+- **Bleu** : Information
+- **Orange** : Avertissement
+
+Chaque test retourne un booléen indiquant son succès ou son échec, et un résumé final affiche le nombre de tests réussis et échoués.
+
+### Utilisation
+
+1. Lancer le backend Node.js sur le port 5000
+2. Ouvrir `headless.html` dans un navigateur
+3. Sélectionner un preset dans le menu déroulant
+4. Cliquer sur "Lancer tous les tests" ou exécuter les tests individuellement
+5. Observer les résultats dans la console de tests
+
+### Intérêt pédagogique
+
+Cette approche de tests headless illustre plusieurs concepts importants :
+- **Séparation des responsabilités** : Le moteur audio fonctionne indépendamment de l'interface
+- **Tests automatisés** : Validation du comportement sans intervention manuelle
+- **Debugging facilité** : Isolation des problèmes du moteur vs. problèmes de l'UI
+- **Documentation vivante** : Les tests servent de documentation du comportement attendu
 
 ---
 

@@ -1,4 +1,4 @@
-// POINT 11 : Web Component pour encapsuler le sampler
+// Web Component pour encapsuler le sampler
 // Permet d'utiliser le sampler comme un element HTML personnalise : <sampler-component></sampler-component>
 
 class SamplerComponent extends HTMLElement {
