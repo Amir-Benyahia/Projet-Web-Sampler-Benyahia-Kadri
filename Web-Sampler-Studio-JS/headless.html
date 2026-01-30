@@ -75,7 +75,11 @@
   <script type="module">
     import SamplerEngine from "./js/SamplerEngine.js";
 
-    const baseURL = "http://localhost:5000";
+    // Detection automatique de l'environnement
+    const baseURL = window.location.hostname === 'localhost'
+      ? 'http://localhost:5000'
+      : 'https://sampler-backend-benyahia-kadri.onrender.com';
+
     const presetSelect = document.getElementById("presetSelect");
     const testOutput = document.getElementById("testOutput");
     
