@@ -5,5 +5,5 @@ export const environment = {
   production: false,
   apiUrl: isLocalhost 
     ? 'http://localhost:5000/api'
-    : 'https://votre-backend.onrender.com/api' // A remplacer par l'URL Render du backend
+    : 'https://sampler-backend-benyahia-kadri.onrender.com/api'
 };
