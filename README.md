@@ -53,15 +53,8 @@ Le projet a été déployé sur la plateforme Render pour permettre une démonst
    - Root Directory : `back-end-NodeJS`
    - Build Command : `npm install`
    - Start Command : `node server.js`
-   
-3. Configuration des variables d'environnement (Settings → Environment) :
-   ```
-   MONGO_URI=mongodb+srv://amirbenyahia550_db_user:Mer.Mer.55@cluster0.hdiyjfu.mongodb.net/sampler?appName=Cluster0
-   PORT=10000
-   NODE_ENV=production
-   ```
 
-4. Configuration MongoDB Atlas :
+3. Configuration MongoDB Atlas :
    - Création d'un cluster gratuit M0
    - Ajout d'un utilisateur avec authentification
    - Configuration de l'accès réseau (0.0.0.0/0 pour autoriser les connexions Render)
