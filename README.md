@@ -60,9 +60,8 @@ Le projet a été déployé sur la plateforme Render pour permettre une démonst
    - Configuration de l'accès réseau (0.0.0.0/0 pour autoriser les connexions Render)
    - Seeding de la base avec 5 presets initiaux (808, Basic Kit, Electronic, Hip-Hop, Steveland Vinyl)
 
-**Note importante** : Il est essentiel de spécifier le nom de la base de données dans l'URI MongoDB (`/sampler` avant les query parameters). Sans cette précision, MongoDB utilise la base "test" par défaut, ce qui a causé des problèmes initiaux de données vides.
 
-#### 2. Déploiement du frontend (Static Site)
+#### 2. Déploiement du frontend 
 
 Configuration du site statique :
 
@@ -176,9 +175,9 @@ Version moderne avec architecture Angular 18+ :
 
 ## Technologies et méthodologies
 
-### Techniques issues du cours M1InfoWebTechnos2025_2026
+### Techniques issues du cours 
 
-#### Séance 1 - Fetch API & Async/Await
+#### Fetch API & Async/Await
 - **Exemple appliqué** : Chargement des presets via `fetch()`
 - **Fichiers** : 
   - `Web-Sampler-Studio.../index.html` : lignes 615-620
@@ -189,7 +188,7 @@ const response = await fetch(`${baseURL}/api/presets`);
 const presets = await response.json();
 ```
 
-#### Séance 2 - REST API & CRUD
+#### REST API & CRUD
 - **Exemple appliqué** : Routes CRUD complètes dans le backend
 - **Pattern** : GET, POST, PUT, DELETE avec Express Router
 - **Fichiers** : `back-end-NodeJS-API-presets-for-sounds-websites/server.js` lignes 93-200
@@ -201,7 +200,7 @@ app.put("/api/presets/:id", async (req, res) => { /* ... */ });
 app.delete("/api/presets/:id", async (req, res) => { /* ... */ });
 ```
 
-#### Séance 4 - Web Audio API
+#### Web Audio API
 - **Exemple appliqué** : Moteur audio complet avec effets
 - **Fichiers** : 
   - `Web-Sampler-Studio.../js/SamplerEngine.js`
@@ -221,7 +220,7 @@ source.start(0, startTime, duration);
 - ConvolverNode pour réverbération
 - StereoPannerNode pour panoramique
 
-#### Séance 5 - CORS & Proxy
+#### CORS & Proxy
 - **Exemple appliqué** : Proxy pour contourner CORS avec Freesound.org
 - **Fichier** : `back-end-NodeJS-API-presets-for-sounds-websites/server.js` lignes 295-320
 ```javascript
@@ -245,7 +244,7 @@ presets.forEach(preset => {
 });
 ```
 
-#### Séance 6 - MediaRecorder API
+#### MediaRecorder API
 - **Exemple appliqué** : Enregistrement vocal avec sauvegarde
 - **Fichiers** : 
   - `Web-Sampler-Studio.../js/recorder.js`
@@ -258,7 +257,7 @@ mediaRecorder.ondataavailable = (event) => chunks.push(event.data);
 const audioBlob = new Blob(chunks, { type: 'audio/webm' });
 ```
 
-#### Séance 7 - Intégration Freesound.org
+#### Intégration Freesound.org
 - **Exemple appliqué** : Recherche et prévisualisation de sons
 - **Fichier** : `Web-Sampler-Studio.../index.html` lignes 970-1085
 ```javascript
@@ -414,11 +413,11 @@ export class SequencerService {
 **Prompt utilisé** :
 > "Je veux implémenter un système de pause/resume pour mon séquenceur audio qui joue des séquences de samples avec des timestamps. Comment gérer le timing pour que la reprise soit exacte sans décalage ? J'utilise setTimeout pour programmer les notes."
 
-**Assistance IA** : ~40%
+**Assistance IA** :
 - Suggestion de l'approche avec timestamps absolus
 - Pattern de calcul du décalage temporel lors de la pause
 
-**Développement manuel** : ~60%
+**Développement manuel** : 
 - Adaptation au contexte de notre projet
 - Intégration avec l'UI et les contrôles existants
 - Tests et ajustements du timing
@@ -431,11 +430,11 @@ export class SequencerService {
 **Prompt utilisé** :
 > "Je dois créer un système d'upload de fichiers audio avec validation du type MIME, sanitization des noms de fichiers et limitation de taille. Comment configurer Multer de manière sécurisée ?"
 
-**Assistance IA** : ~50%
+**Assistance IA** : 
 - Configuration de base de Multer
 - Patterns de validation de fichiers
 
-**Développement manuel** : ~50%
+**Développement manuel** : 
 - Adaptation aux besoins spécifiques (recordings)
 - Gestion des extensions selon MIME type
 - Intégration avec les routes existantes
@@ -447,11 +446,11 @@ export class SequencerService {
 **Prompt utilisé** :
 > "Comment créer un système de sauvegarde et chargement de séquences musicales avec localStorage ? Je veux pouvoir sauvegarder plusieurs séquences, les lister, les charger et les supprimer."
 
-**Assistance IA** : ~30%
+**Assistance IA** : 
 - Structure de données JSON pour les séquences
 - Patterns de manipulation de localStorage
 
-**Développement manuel** : ~70%
+**Développement manuel** : 
 - UI complète de la bibliothèque
 - Intégration avec le système de séquençage existant
 - Gestion du compteur et de l'affichage
@@ -464,11 +463,11 @@ export class SequencerService {
 **Prompt utilisé** :
 > "Je veux créer un service Angular pour gérer l'enregistrement audio avec MediaRecorder API. Le service doit gérer le démarrage, l'arrêt, l'annulation et retourner un Blob."
 
-**Assistance IA** : ~35%
+**Assistance IA** : 
 - Structure de base du service Angular
 - Gestion des promesses avec MediaRecorder
 
-**Développement manuel** : ~65%
+**Développement manuel** : 
 - Interface complète avec modal
 - Conversion Blob → AudioBuffer
 - Upload vers le backend
@@ -482,11 +481,11 @@ export class SequencerService {
 **Prompt utilisé** :
 > "Comment implémenter un système d'effets audio (filtre, delay, reverb) avec Web Audio API qui peut être activé/désactivé dynamiquement ?"
 
-**Assistance IA** : ~25%
+**Assistance IA** : 
 - Rappel des nodes Web Audio API
 - Pattern de chaînage des effets
 
-**Développement manuel** : ~75%
+**Développement manuel** : 
 - Implémentation complète des 3 effets
 - Génération d'impulse response pour reverb
 - UI de contrôle avec sliders
@@ -496,7 +495,7 @@ export class SequencerService {
 - `sampler-frontend-angular/src/app/services/audio.service.ts` lignes 50-200
 - `sampler-frontend-angular/src/app/components/audio-effects/`
 
-### Features développées sans IA (100% manuel)
+### Features développées sans IA
 
 1. **Visualisation de waveform** - Basée sur le cours Seance4/Example2
 2. **Trim bars avec drag & drop** - Adaptation du cours avec touch support
@@ -634,13 +633,6 @@ Ouvrir **http://localhost:8080** dans le navigateur
 5. Cliquer "Play" ou appuyer sur la touche du clavier associée
 6. Utiliser "Rec Sequence" pour enregistrer une séquence rythmique
 
-**Raccourcis clavier** :
-```
-Pads rangée 1 : 1, 2, 3, 4
-Pads rangée 2 : Q, W, E, R
-Pads rangée 3 : A, S, D, F
-Pads rangée 4 : Z, X, C, V
-```
 
 #### 3. Frontend Angular
 ```bash
