@@ -25,6 +25,9 @@ export class AudioService {
   private delayEnabled = false;
   private reverbEnabled = false;
 
+  // Sources audio actives pour pouvoir les arrêter
+  private activeSources: AudioBufferSourceNode[] = [];
+
   constructor() {}
 
   /**
@@ -143,6 +146,17 @@ export class AudioService {
 
     const source = this.audioContext!.createBufferSource();
     source.buffer = buffer;
+    
+    // Ajouter aux sources actives
+    this.activeSources.push(source);
+    
+    // Supprimer de la liste quand terminé
+    source.onended = () => {
+      const index = this.activeSources.indexOf(source);
+      if (index > -1) {
+        this.activeSources.splice(index, 1);
+      }
+    };
     
     let currentNode: AudioNode = source;
     
@@ -303,5 +317,30 @@ export class AudioService {
    */
   getAudioContext(): AudioContext | null {
     return this.audioContext;
+  }
+
+  /**
+   * Arrête tous les sons en cours de lecture
+   */
+  stopAllSounds(): void {
+    // Arrêter toutes les sources actives
+    this.activeSources.forEach(source => {
+      try {
+        source.stop();
+        source.disconnect();
+      } catch (e) {
+        // Ignorer les erreurs si la source est déjà arrêtée
+      }
+    });
+    
+    // Vider le tableau des sources actives
+    this.activeSources = [];
+  }
+
+  /**
+   * Retourne le nombre de sons en cours de lecture
+   */
+  getActiveSourcesCount(): number {
+    return this.activeSources.length;
   }
 }

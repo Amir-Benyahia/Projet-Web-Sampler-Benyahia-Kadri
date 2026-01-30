@@ -236,4 +236,11 @@ export class SamplerPageComponent implements OnInit {
     const seconds = this.recordingTime % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
+
+  /**
+   * Arrête tous les sons en cours de lecture
+   */
+  stopAllSounds(): void {
+    this.audioService.stopAllSounds();
+  }
 }
