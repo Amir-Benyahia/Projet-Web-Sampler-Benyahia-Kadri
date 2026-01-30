@@ -637,14 +637,6 @@ Chaque test retourne un booléen indiquant son succès ou son échec, et un rés
 4. Cliquer sur "Lancer tous les tests" ou exécuter les tests individuellement
 5. Observer les résultats dans la console de tests
 
-### Intérêt pédagogique
-
-Cette approche de tests headless illustre plusieurs concepts importants :
-- **Séparation des responsabilités** : Le moteur audio fonctionne indépendamment de l'interface
-- **Tests automatisés** : Validation du comportement sans intervention manuelle
-- **Debugging facilité** : Isolation des problèmes du moteur vs. problèmes de l'UI
-- **Documentation vivante** : Les tests servent de documentation du comportement attendu
-
 ---
 
 ## Manuel d'utilisation
