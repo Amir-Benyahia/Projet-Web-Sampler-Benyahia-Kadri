@@ -310,7 +310,10 @@
     const padKeys = ["z","x","c","v","a","s","d","f","q","w","e","r","1","2","3","4"];
     const keyToPad = Object.fromEntries(padKeys.map((k,i)=>[k,i]));
 
-    const baseURL = "http://localhost:5000";
+    // Detection automatique de l'environnement
+    const baseURL = window.location.hostname === 'localhost'
+      ? 'http://localhost:5000'
+      : 'https://votre-backend.onrender.com'; // A remplacer par l'URL Render du backend
 
     let sampler = null;
     let samplerGUI = null;
