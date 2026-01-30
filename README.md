@@ -785,15 +785,6 @@ Projet_Final/
 │   ├── angular.json                             # Config Angular CLI
 │   ├── tsconfig.json                            # Config TypeScript
 │   └── package.json                             # Dépendances npm
-│
-├── M1InfoWebTechnos2025_2026/                   # Cours et exemples
-│   ├── Seance1/                                 # Fetch API
-│   ├── Seance2/                                 # REST API
-│   ├── Seance4_IntroWebAudio/                   # Web Audio
-│   ├── Seance5/                                 # CORS & Proxy
-│   ├── Seance6/                                 # MediaRecorder
-│   └── Seance7_freesound_API/                   # Freesound
-│
 └── README_GLOBAL.md                             # Ce fichier
 ```
 
