@@ -2,7 +2,7 @@
 
 **Étudiants :** Benyahia Amir & Kadri Dia Eddine  
 **Formation :** Master 1 Informatique  
-**Cours :** Technologies Web  
+**Cours :** Web  
 **Année universitaire :** 2025-2026
 
 ---
